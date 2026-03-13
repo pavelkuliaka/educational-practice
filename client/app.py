@@ -1,4 +1,13 @@
-from flask import Flask, request, render_template, session, redirect, url_for, flash, abort
+from flask import (
+    Flask,
+    request,
+    render_template,
+    session,
+    redirect,
+    url_for,
+    flash,
+    abort,
+)
 
 from config import CONFIGS, PERMANENT_SESSION_LIFETIME, APP_SECRET_KEY
 from database import init_database, close_database, get_database
@@ -18,6 +27,8 @@ app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 
 @app.route("/login", methods=["GET", "POST"])
 def login_page():
+    if "user" in session:
+        return redirect(url_for("dashboard_page"))
     if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
@@ -94,7 +105,10 @@ def callback(provider):
         abort(400, description="Provider not supported")
 
     if request.args.get("state") != session.get("oauth_state"):
+        session.pop("oauth_state")
         abort(400, description="Invalid state")
+
+    session.pop("oauth_state")
 
     code = request.args.get("code")
     if not code:
@@ -114,7 +128,6 @@ def callback(provider):
 
     if not email:
         abort(400, description="Failed to obtain email")
-    
 
     database = get_database()
     cursor = database.cursor()
