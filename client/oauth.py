@@ -121,11 +121,11 @@ def get_email_oidc(provider, id_token):
 
         if payload.get("nonce") != session.get("oauth_nonce"):
             session.pop("oauth_nonce")
-            return None
+            abort(400, description="Invalid NONCE")
 
         email = payload.get("email")
         session.pop("oauth_nonce")
         return email
 
     except jwt.InvalidTokenError:
-        return None
+        abort(400, description="Invalid ID token")
