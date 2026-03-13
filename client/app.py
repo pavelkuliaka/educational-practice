@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, session, redirect, url_for, flash
+from flask import Flask, request, render_template, session, redirect, url_for, flash, abort
 
 from config import CONFIGS, PERMANENT_SESSION_LIFETIME, APP_SECRET_KEY
 from database import init_database, close_database, get_database
@@ -70,18 +70,18 @@ def home_page():
 
 @app.errorhandler(404)
 def page_not_found(error):
-    return render_template("404.html")
+    return render_template("404.html"), 404
 
 
 @app.errorhandler(400)
 def bad_request(error):
-    return render_template("400.html", error=error)
+    return render_template("400.html", error=error), 400
 
 
 @app.route("/login/<provider>")
 def login_provider(provider):
     if provider not in CONFIGS:
-        return "Provider not supported", 400
+        abort(400, description="Provider not supported")
 
     auth_url = build_auth_url(provider)
 
@@ -91,29 +91,30 @@ def login_provider(provider):
 @app.route("/callback/<provider>")
 def callback(provider):
     if provider not in CONFIGS:
-        return "Provider not supported", 400
+        abort(400, description="Provider not supported")
 
     if request.args.get("state") != session.get("oauth_state"):
-        return "Invalid state", 400
+        abort(400, description="Invalid state")
 
     code = request.args.get("code")
     if not code:
-        return "No code received", 400
+        abort(400, description="No code received")
 
     tokens = get_tokens(provider, code)
 
     email = None
     if provider in ("google", "my_service"):
         if not tokens.get("id_token"):
-            return "Failed to obtain tokens", 400
+            abort(400, description="Failed to obtain tokens")
         email = get_email_oidc(provider, tokens["id_token"])
     else:
         if not tokens.get("access_token"):
-            return "Failed to obtain tokens", 400
+            abort(400, description="Failed to obtain tokens")
         email = get_email_oauth2(provider, tokens["access_token"])
 
     if not email:
-        return "Failed to obtain email", 400
+        abort(400, description="Failed to obtain email")
+    
 
     database = get_database()
     cursor = database.cursor()

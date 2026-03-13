@@ -1,5 +1,5 @@
 import secrets
-from flask import session, url_for
+from flask import session, url_for, abort
 from config import CONFIGS
 import requests
 import jwt
@@ -49,7 +49,7 @@ def get_tokens(provider, code):
     )
 
     if token_response.status_code != 200:
-        return None
+        abort(400, description="Invalid status code")
 
     tokens = token_response.json()
 
@@ -68,18 +68,16 @@ def get_email_oauth2(provider, access_token):
     headers = None
     if provider == "github":
         headers = {
-            "Authorization": f"token {access_token}",
-            "Accept": "application/json",
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/vnd.github+json",
         }
     elif provider == "yandex":
         headers = {"Authorization": f"OAuth {access_token}"}
-    else:
-        return None
 
     user_response = requests.get(CONFIGS[provider]["userinfo_url"], headers=headers)
 
     if user_response.status_code != 200:
-        return None
+        abort(400, description="Invalid status code")
 
     user_data = user_response.json()
 
@@ -87,16 +85,20 @@ def get_email_oauth2(provider, access_token):
 
     if provider == "github":
         email = user_data.get("email")
+
         if not email:
             email_response = requests.get(
                 "https://api.github.com/user/emails", headers=headers
             )
             if email_response.status_code == 200:
                 emails = email_response.json()
+
                 for email_data in emails:
                     if email_data.get("primary") and email_data.get("verified"):
                         email = email_data.get("email")
                         break
+            else:
+                abort(400, description="Invalid status code")
     elif provider == "yandex":
         email = user_data.get("default_email")
 
@@ -118,9 +120,11 @@ def get_email_oidc(provider, id_token):
         )
 
         if payload.get("nonce") != session.get("oauth_nonce"):
+            session.pop("oauth_nonce")
             return None
 
         email = payload.get("email")
+        session.pop("oauth_nonce")
         return email
 
     except jwt.InvalidTokenError:
