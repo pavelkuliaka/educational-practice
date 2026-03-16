@@ -67,27 +67,14 @@
 
         <!-- Кнопки соцсетей -->
         <div class="space-y-3">
-            <!-- Google -->
-            <a href="{{ url_for('login_provider', provider='google') }}" class="w-full flex items-center justify-center gap-3 font-semibold bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-medium py-3 px-4 rounded-lg transition duration-200 transform hover:scale-[1.02]">
-                <i class="fab fa-google text-red-500 text-xl"></i>
-                <span>Google</span>
+            {% for provider in providers %}
+            <a href="{{ url_for('login_provider', provider=provider['id']) }}" class="w-full flex items-center justify-center gap-3 border border-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-lg transition duration-200 transform hover:scale-[1.02]">
+                {% if provider["icon"] %}
+                    <img src="{{ provider['icon'] }}" class="w-6 h-6 object-contain" onerror="this.style.display='none'">
+                {% endif %}
+                <span>{{ provider["name"] }}</span>
             </a>
-
-            <!-- GitHub -->
-            <a href="{{ url_for('login_provider', provider='github') }}" class="w-full flex items-center justify-center gap-3 bg-zinc-800 hover:bg-zinc-950 text-white font-medium py-3 px-4 rounded-lg transition duration-200 transform hover:scale-[1.02]">
-                <i class="fa-brands fa-github text-xl"></i>
-                <span>GitHub</span>
-            </a>
-
-            <!-- Яндекс -->
-            <a href="{{ url_for('login_provider', provider='yandex') }}" class="w-full flex items-center justify-center gap-3 bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 transform hover:scale-[1.02]">
-                <i class="fab fa-yandex-international text-xl"></i>
-                <span>Яндекс</span>
-            </a>
-            <!-- Мой сервис -->
-            <a href="{{ url_for('login_provider', provider='my_service') }}" class="w-full flex items-center justify-center gap-3 border border-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-lg transition duration-200 transform hover:scale-[1.02]">
-                <span>Мой сервис</span>
-            </a>
+            {% endfor %}
         </div>
     </div>
 {% endblock %}
