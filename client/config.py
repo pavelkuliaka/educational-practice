@@ -19,11 +19,9 @@ CONFIGS = {
                 "issuer": "",
                 "jwks_uri": "",
                 "algorithms": [],
-            }
+            },
         },
-        "token_request_headers": {
-            
-        }
+        "token_request_headers": {},
     },
     "google": {
         "name": "Google",
@@ -38,13 +36,13 @@ CONFIGS = {
             "params": {
                 "issuer": "https://accounts.google.com",
                 "jwks_uri": "https://www.googleapis.com/oauth2/v3/certs",
-                "algorithms": ["RS256"]
-            }
+                "algorithms": ["RS256"],
+            },
         },
         "token_request_headers": {
             "Accept": "application/json",
-            "Content-Type": "application/x-www-form-urlencoded"
-        }
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
     },
     "github": {
         "name": "GitHub",
@@ -60,13 +58,11 @@ CONFIGS = {
                 "user_info_url": "https://api.github.com/user/emails",
                 "email_request_headers": lambda access_token: {
                     "Authorization": f"Bearer {access_token}",
-                    "Accept": "application/vnd.github+json"
-                }
-            }
+                    "Accept": "application/vnd.github+json",
+                },
+            },
         },
-        "token_request_headers": {
-            "Accept": "application/json"
-        }
+        "token_request_headers": {"Accept": "application/json"},
     },
     "yandex": {
         "name": "Яндекс",
@@ -82,14 +78,12 @@ CONFIGS = {
                 "user_info_url": "https://login.yandex.ru/info",
                 "email_request_headers": lambda access_token: {
                     "Authorization": f"Bearer {access_token}",
-                    "Accept": "application/json"
-                }
-            }
+                    "Accept": "application/json",
+                },
+            },
         },
-        "token_request_headers": {
-            "Accept": "application/json"
-        }
-    }
+        "token_request_headers": {"Accept": "application/json"},
+    },
 }
 
 PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)

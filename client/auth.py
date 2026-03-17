@@ -2,7 +2,10 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from database import get_database
 
 
-def verify_user(email, password):
+def verify_user(email: str | None, password: str | None) -> bool | str:
+    if not email or not password:
+        return False
+
     database = get_database()
     cursor = database.cursor()
 
@@ -13,8 +16,9 @@ def verify_user(email, password):
     if not user:
         return False
 
-    if user["provider"]:
-        return user["provider"]
+    provider = user["provider"]
+    if provider:
+        return provider
 
     if check_password_hash(user["password_hash"], password):
         return True
@@ -22,7 +26,10 @@ def verify_user(email, password):
     return False
 
 
-def register_user(email, password):
+def register_user(email: str | None, password: str | None) -> bool | str:
+    if not email or not password:
+        return False
+
     database = get_database()
     cursor = database.cursor()
 
@@ -46,7 +53,8 @@ def register_user(email, password):
 
         return True
 
-    if existing_user["provider"]:
-        return existing_user["provider"]
+    provider = existing_user.get("provider")
+    if provider:
+        return provider
 
     return False

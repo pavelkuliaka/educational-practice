@@ -7,7 +7,6 @@ from flask import (
     url_for,
     flash,
     abort,
-    Response
 )
 
 from typing import Any
@@ -31,249 +30,266 @@ app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 
 
 @app.route(rule="/login", methods=["GET", "POST"])
-def login_page() -> Response | str:
+def login_page():
     if "user" in session:
-        return redirect(location=url_for(endpoint="dashboard_page"))
+        return redirect(url_for("dashboard_page"))
     if request.method == "POST":
-        email = request.form.get(key="email", default=None)
-        password = request.form.get(key="password", default=None)
+        email = request.form.get("email")
+        password = request.form.get("password")
 
-        verify = verify_user(email=email, password=password)
+        verify = verify_user(email, password)
 
-        if isinstance(obj=verify, class_or_tuple=str):
-            verify_provider_name = CONFIGS[verify].get(key="name", default=None)
+        if isinstance(verify, str):
+            verify_provider_name = CONFIGS[verify].get("name")
             if not verify_provider_name:
-                abort(code=400, description=f"The provider with the id \"{verify}\" is not in the configuration file")
+                abort(
+                    400,
+                    description=f'The provider with the id "{verify}" is not in the configuration file',
+                )
 
-            flash(message=f"Войдите через {verify_provider_name}", category="info")
-            return redirect(location=url_for(endpoint="login_page"))
+            flash(f"Войдите через {verify_provider_name}", "info")
+            return redirect(url_for("login_page"))
         elif verify:
             session["user"] = email
             session.permanent = True
-            return redirect(location=url_for(endpoint="dashboard_page"))
+            return redirect(url_for("dashboard_page"))
         else:
-            flash(message="Неверный email или пароль", category="error")
-            return redirect(location=url_for(endpoint="login_page"))
+            flash("Неверный email или пароль", "error")
+            return redirect(url_for("login_page"))
 
     providers = [
         {"id": key, "name": CONFIGS[key].get("name"), "icon": CONFIGS[key].get("icon")}
         for key in CONFIGS
     ]
-    return render_template(template_name_or_list="login.html", providers=providers)
+    return render_template("login.html", providers=providers)
 
 
 @app.route(rule="/register", methods=["GET", "POST"])
-def register_page() -> Response | str:
+def register_page():
     if request.method == "POST":
-        email = request.form.get(key="email", default=None)
-        password = request.form.get(key="password", default=None)
+        email = request.form.get("email")
+        password = request.form.get("password")
 
-        registration = register_user(email=email, password=password)
+        registration = register_user(email, password)
 
-        if isinstance(obj=registration, class_or_tuple=str):
-            provider_id = CONFIGS.get(key=registration, default=None)
+        if isinstance(registration, str):
+            provider_id = CONFIGS.get(registration)
             if not provider_id:
-                abort(code=400, description=f"The provider with the name \"{provider_id}\" is not in the configuration file")
+                abort(
+                    400,
+                    description=f'The provider with the name "{provider_id}" is not in the configuration file',
+                )
 
-            name = provider_id.get("name", default=None)
+            name = provider_id.get("name")
             if not name:
-                abort(code=400, description=f"The provider with the name \"{name}\" is not in the configuration file")
+                abort(
+                    400,
+                    description=f'The provider with the name "{name}" is not in the configuration file',
+                )
 
-            flash(message=f"Войдите через {name}", category="info")
-            return redirect(location=url_for(endpoint="login_page"))
+            flash(f"Войдите через {name}", "info")
+            return redirect(url_for("login_page"))
         elif registration:
-            flash(message="Регистрация прошла успешно. Войдите в аккаунт", category="success")
-            return redirect(location=url_for(endpoint="login_page"))
+            flash("Регистрация прошла успешно. Войдите в аккаунт", "success")
+            return redirect(url_for("login_page"))
         else:
-            flash(message="У Вас уже есть аккаунт. Войдите при помощи пароля", category="error")
-            return redirect(location=url_for(endpoint="login_page"))
+            flash("У Вас уже есть аккаунт. Войдите при помощи пароля", "error")
+            return redirect(url_for("login_page"))
 
-    return render_template(template_name_or_list="register.html")
+    return render_template("register.html")
 
 
 @app.route(rule="/")
-def home_page() -> Response:
+def home_page():
     if "user" in session:
-        return redirect(location=url_for(endpoint="dashboard_page"))
+        return redirect(url_for("dashboard_page"))
 
     session.clear()
-    return redirect(location=url_for(endpoint="login_page"))
+    return redirect(url_for("login_page"))
 
 
 @app.errorhandler(code_or_exception=404)
-def page_not_found(error: Any) -> tuple[Response, int]:
-    return render_template(template_name_or_list="404.html"), 404
+def page_not_found(error: Any):
+    return render_template("404.html"), 404
 
 
 @app.errorhandler(code_or_exception=400)
-def bad_request(error: Any) -> tuple[Response, int]:
-    return render_template(template_name_or_list="400.html", error=error.description), 400
+def bad_request(error: Any):
+    return render_template("400.html", error=error.description), 400
 
 
-@app.route("/login/<provider>")
-def login_provider(provider) -> Response:
+@app.route(rule="/login/<provider>")
+def login_provider(provider: str | None):
     if provider not in CONFIGS:
-        abort(code=400, description=f"Provider \"{provider}\" not supported")
+        abort(400, description=f'Provider "{provider}" not supported')
 
-    provider_config = CONFIGS.get(key=provider, default=None)
+    provider_config = CONFIGS.get(provider)
     if not provider_config:
         abort(
-            code=400,
+            400,
             description=f"Error in the provider's configuration file: missing {provider}'s config",
         )
 
-    client_id = provider_config.get("client_id", default=None)
+    client_id = provider_config.get("client_id")
     if not client_id:
         abort(
-            code=400,
-            description=f'Error in the provider\'s configuration file: missing "client_id"',
+            400,
+            description='Error in the provider\'s configuration file: missing "client_id"',
         )
 
-    scope = provider_config.get(key="scope", default=None)
+    scope = provider_config.get("scope")
     if not scope:
         abort(
-            code=400,
-            description=f"Error in the provider\'s configuration file: missing \"scope\"",
+            400,
+            description='Error in the provider\'s configuration file: missing "scope"',
         )
 
-    auth_type = provider_config.get(key="auth_type", default=None)
+    auth_type = provider_config.get("auth_type")
     if not auth_type:
         abort(
-            code=400,
-            description=f'Error in the provider\'s configuration file: missing "auth_type"',
+            400,
+            description='Error in the provider\'s configuration file: missing "auth_type"',
         )
 
-    auth_type_value = auth_type.get(key="type", default=None)
+    auth_type_value = auth_type.get("type")
     if not auth_type_value:
         abort(
-            code=400,
-            description=f"Error in the provider\'s configuration file: missing \"type\"",
-        )   
+            400,
+            description='Error in the provider\'s configuration file: missing "type"',
+        )
 
-    auth_url = build_auth_url(
-        provider=provider,
-        client_id=client_id,
-        scope=scope,
-        auth_type_value=auth_type_value
+    auth_url = provider_config.get("auth_url")
+    if not auth_url:
+        abort(
+            400,
+            description='Error in the provider\'s configuration file: missing "auth_url"',
+        )
+
+    parametryzed_auth_url = build_auth_url(
+        provider,
+        client_id,
+        scope,
+        auth_type_value,
+        auth_url,
     )
 
-    return redirect(location=auth_url)
+    return redirect(parametryzed_auth_url)
 
 
 @app.route(rule="/callback/<provider>")
 def callback(provider: str):
     if provider not in CONFIGS:
-        abort(code=400, description="Provider not supported")
+        abort(400, description="Provider not supported")
 
-    if request.args.get(key="state", default=None) != session.get(key="oauth2_state", default=None):
-        session.pop(key="oauth2_state", default=None)
-        abort(code=400, description="Invalid state")
+    if request.args.get("state") != session.get("oauth2_state"):
+        session.pop("oauth2_state")
+        abort(400, description="Invalid state")
 
-    session.pop(key="oauth2_state", default=None)
+    session.pop("oauth2_state")
 
-    code = request.args.get(key="code", default=None)
+    code = request.args.get("code")
     if not code:
-        abort(code=400, description="No code received")
+        abort(400, description="No code received")
 
-    provider_config = CONFIGS.get(key=provider, default=None)
+    provider_config = CONFIGS.get(provider)
     if not provider_config:
         abort(
-            code=400,
+            400,
             description=f"Error in the provider's configuration file: {provider}'s config is empty",
         )
 
-    auth_type = provider_config.get(key="auth_type", default=None)
+    auth_type = provider_config.get("auth_type")
     if not auth_type:
         abort(
-            code=400,
-            description="Error in the provider\'s configuration file: missing \"auth_type\"",
+            400,
+            description='Error in the provider\'s configuration file: missing "auth_type"',
         )
 
-    auth_type_value = auth_type.get(key="type", default=None)
+    auth_type_value = auth_type.get("type")
     if not auth_type_value:
         abort(
-            code=400,
-            description="Error in the provider\'s configuration file: missing \"type\" in \"auth_type\"",
+            400,
+            description='Error in the provider\'s configuration file: missing "type" in "auth_type"',
         )
 
-    client_id = provider_config.get(key="client_id", default=None)
+    client_id = provider_config.get("client_id")
     if not client_id:
         abort(
-            code=400,
-            description="Error in the provider\'s configuration file: missing \"client_id\"",
+            400,
+            description='Error in the provider\'s configuration file: missing "client_id"',
         )
 
-    client_secret = provider_config.get(key="client_secret", default=None)
+    client_secret = provider_config.get("client_secret")
     if not client_secret:
         abort(
-            code=400,
-            description="Error in the provider\'s configuration file: missing \"client_secret\"",
+            400,
+            description='Error in the provider\'s configuration file: missing "client_secret"',
         )
 
-    token_url = provider_config.get(key="token_url", default=None)
+    token_url = provider_config.get("token_url")
     if not token_url:
         abort(
-            code=400,
-            description="Error in the provider\'s configuration file: missing \"token_url\"",
+            400,
+            description='Error in the provider\'s configuration file: missing "token_url"',
         )
 
-    token_request_headers = provider_config.get(key="token_request_headers", default=None)
+    token_request_headers = provider_config.get("token_request_headers")
     if not token_request_headers:
         abort(
-            code=400,
-            description="Error in the provider\'s configuration file: missing \"token_request_headers\"",
+            400,
+            description='Error in the provider\'s configuration file: missing "token_request_headers"',
         )
 
     tokens = get_tokens(
-        provider=provider,
-        code=code,
-        client_id=client_id,
-        client_secret=client_secret,
-        token_request_headers=token_url,
-        token_request_headers=token_request_headers
+        provider,
+        code,
+        client_id,
+        client_secret,
+        token_url,
+        token_request_headers,
     )
 
-    params = auth_type.get(key="params", default=None)
+    params = auth_type.get("params")
     if not params:
         abort(
-            code=400,
-            description="Error in the provider\'s configuration file: missing \"params\"",
+            400,
+            description='Error in the provider\'s configuration file: missing "params"',
         )
 
     email = None
     if auth_type_value == "OIDC":
-        id_token = tokens.get(key="id_token", default=None)
+        id_token = tokens.get("id_token")
 
         if not id_token:
-            abort(code=400, description="Failed to obtain ID token")
+            abort(400, description="Failed to obtain ID token")
 
-        jwks_uri = params.get(key="jwks_uri", default=None)
+        jwks_uri = params.get("jwks_uri")
         if not jwks_uri:
             abort(
-                code=400,
-                description="Error in the provider\'s configuration file: missing \"jwks_uri\"",
+                400,
+                description='Error in the provider\'s configuration file: missing "jwks_uri"',
             )
 
-        algorithms = params.get(key="algorithms", default=None)
+        algorithms = params.get("algorithms")
         if not algorithms:
             abort(
-                code=400,
-                description="Error in the provider\'s configuration file: missing \"algorithms\"",
+                400,
+                description='Error in the provider\'s configuration file: missing "algorithms"',
             )
 
-        issuer = params.get(key="issuer", default=None)
+        issuer = params.get("issuer")
         if not issuer:
             abort(
-                code=400,
-                description="Error in the provider\'s configuration file: missing \"issuer\"",
+                400,
+                description='Error in the provider\'s configuration file: missing "issuer"',
             )
 
         email = get_email_OIDC(
-            id_token=id_token,
-            jwks_uri=jwks_uri,
-            algorithms=algorithms,
-            client_id=client_id,
-            issuer=issuer
+            id_token,
+            jwks_uri,
+            algorithms,
+            client_id,
+            issuer,
         )
     elif auth_type_value == "OAuth2":
         access_token = tokens.get("access_token")
@@ -317,7 +333,7 @@ def callback(provider: str):
     existing_user = cursor.fetchone()
 
     if existing_user:
-        user_provider = existing_user["provider"]
+        user_provider = existing_user.get("provider")
 
         if not user_provider:
             flash("У Вас уже есть аккаунт. Войдите при помощи пароля", "error")
@@ -358,21 +374,21 @@ def callback(provider: str):
     return redirect(url_for("dashboard_page"))
 
 
-@app.route("/dashboard")
+@app.route(rule="/dashboard")
 def dashboard_page():
     if "user" not in session:
         return redirect(url_for("logout"))
     return render_template("dashboard.html", user_email=session["user"])
 
 
-@app.route("/logout")
+@app.route(rule="/logout")
 def logout():
     session.clear()
     return redirect(url_for("login_page"))
 
 
-def main():
-    app.run(debug=True, port=5000)
+def main() -> None:
+    app.run(port=5000, debug=True)
 
 
 if __name__ == "__main__":

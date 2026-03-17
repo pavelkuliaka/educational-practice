@@ -1,12 +1,13 @@
 import secrets
 from flask import session, url_for, abort
-from config import CONFIGS
 import requests
 import jwt
 from utils import extract_email
 
 
-def build_auth_url(provider, client_id, scope, auth_type_value):
+def build_auth_url(
+    provider: str, client_id: str, scope: str, auth_type_value: str, auth_url: str
+) -> str:
     state = secrets.token_urlsafe(32)
 
     session["oauth2_state"] = state
@@ -29,12 +30,17 @@ def build_auth_url(provider, client_id, scope, auth_type_value):
 
     session.permanent = True
 
-    return f"{CONFIGS[provider]['auth_url']}?{requests.compat.urlencode(params)}"
+    return f"{auth_url}?{requests.compat.urlencode(params)}"
 
 
 def get_tokens(
-    provider, code, client_id, client_secret, token_url, token_request_headers
-):
+    provider: str,
+    code: str,
+    client_id: str,
+    client_secret: str,
+    token_url: str,
+    token_request_headers: dict,
+) -> dict:
     token_data = {
         "code": code,
         "client_id": client_id,
@@ -43,22 +49,22 @@ def get_tokens(
         "grant_type": "authorization_code",
     }
 
-    token_response = requests.post(
-        token_url, data=token_data, headers=token_request_headers
-    )
+    token_response = requests.post(token_url, token_data, headers=token_request_headers)
 
     if token_response.status_code != 200:
         abort(400, description="Invalid status code")
 
     tokens = token_response.json()
 
-    access_token = tokens.get("access_token")
-    id_token = tokens.get("id_token")
+    access_token = tokens.get("access_token", None)
+    id_token = tokens.get("id_token", None)
 
     return {"access_token": access_token, "id_token": id_token}
 
 
-def get_email_OIDC(id_token, jwks_uri, algorithms, client_id, issuer):
+def get_email_OIDC(
+    id_token: str, jwks_uri: str, algorithms: list, client_id: str, issuer: str
+) -> str:
     try:
         jwks_client = jwt.PyJWKClient(jwks_uri)
         signing_key = jwks_client.get_signing_key_from_jwt(id_token)
@@ -66,17 +72,17 @@ def get_email_OIDC(id_token, jwks_uri, algorithms, client_id, issuer):
         payload = jwt.decode(
             id_token,
             signing_key.key,
-            algorithms=algorithms,
+            algorithms,
             audience=client_id,
             issuer=issuer,
             options={"verify_exp": True},
         )
 
-        if payload.get("nonce") != session.get("oauth2_nonce"):
+        if payload.get("nonce", None) != session.get("oauth2_nonce", None):
             session.pop("oauth2_nonce", None)
             abort(400, description="Invalid NONCE")
 
-        email = payload.get("email")
+        email = payload.get("email", None)
         session.pop("oauth2_state", None)
         session.pop("oauth2_nonce", None)
         return email
@@ -86,8 +92,8 @@ def get_email_OIDC(id_token, jwks_uri, algorithms, client_id, issuer):
         abort(400, description="Invalid ID token")
 
 
-def get_email_OAuth2(user_info_url, headers):
-    user_response = requests.get(user_info_url, headers=headers)
+def get_email_OAuth2(user_info_url: str, headers: dict) -> str:
+    user_response = requests.get(url=user_info_url, headers=headers)
 
     if user_response.status_code != 200:
         abort(400, description="Invalid status code")
