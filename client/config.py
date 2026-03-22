@@ -5,24 +5,6 @@ from datetime import timedelta
 env = dotenv_values("./client/.env")
 
 CONFIGS = {
-    "my_service": {
-        "name": "Мой сервис",
-        "icon": "",
-        "client_id": env["MY_SERVICE_CLIENT_ID"],
-        "client_secret": env["MY_SERVICE_CLIENT_SECRET"],
-        "auth_url": "http://localhost:8001/oauth2/authorize",
-        "token_url": "http://localhost:8001/oauth2/access_token",
-        "scope": "openid",
-        "auth_type": {
-            "type": "OIDC",
-            "params": {
-                "issuer": "",
-                "jwks_uri": "",
-                "algorithms": [],
-            },
-        },
-        "token_request_headers": {},
-    },
     "google": {
         "name": "Google",
         "icon": "static/icons/google.svg",

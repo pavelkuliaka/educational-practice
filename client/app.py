@@ -15,7 +15,7 @@ from config import CONFIGS, PERMANENT_SESSION_LIFETIME, APP_SECRET_KEY
 from database import init_database, close_database, get_database
 from auth import verify_user, register_user
 from oauth2 import build_auth_url, get_tokens, get_email_OAuth2, get_email_OIDC
-from utils import build_headers
+from utils import build_headers, validate_provider_config
 
 
 app = Flask(__name__)
@@ -120,60 +120,18 @@ def bad_request(error: Any):
 
 @app.route(rule="/login/<provider>")
 def login_provider(provider: str | None):
-    if provider not in CONFIGS:
-        abort(400, description=f'Provider "{provider}" not supported')
+    config = validate_provider_config(provider, CONFIGS)
+    assert provider is not None
 
-    provider_config = CONFIGS.get(provider)
-    if not provider_config:
-        abort(
-            400,
-            description=f"Error in the provider's configuration file: missing {provider}'s config",
+    return redirect(
+        build_auth_url(
+            provider,
+            config["client_id"],
+            config["scope"],
+            config["auth_type"]["type"],
+            config["auth_url"],
         )
-
-    client_id = provider_config.get("client_id")
-    if not client_id:
-        abort(
-            400,
-            description='Error in the provider\'s configuration file: missing "client_id"',
-        )
-
-    scope = provider_config.get("scope")
-    if not scope:
-        abort(
-            400,
-            description='Error in the provider\'s configuration file: missing "scope"',
-        )
-
-    auth_type = provider_config.get("auth_type")
-    if not auth_type:
-        abort(
-            400,
-            description='Error in the provider\'s configuration file: missing "auth_type"',
-        )
-
-    auth_type_value = auth_type.get("type")
-    if not auth_type_value:
-        abort(
-            400,
-            description='Error in the provider\'s configuration file: missing "type"',
-        )
-
-    auth_url = provider_config.get("auth_url")
-    if not auth_url:
-        abort(
-            400,
-            description='Error in the provider\'s configuration file: missing "auth_url"',
-        )
-
-    parametryzed_auth_url = build_auth_url(
-        provider,
-        client_id,
-        scope,
-        auth_type_value,
-        auth_url,
     )
-
-    return redirect(parametryzed_auth_url)
 
 
 @app.route(rule="/callback/<provider>")
