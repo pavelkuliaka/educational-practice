@@ -4,4 +4,6 @@ version = "0.1.0"
 description = "Educational practice dedicated to OAuth2 and OpenID Connect"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "flask>=3.1.3",
+]
