@@ -15,8 +15,10 @@ from config import CONFIGS, PERMANENT_SESSION_LIFETIME, APP_SECRET_KEY
 from database import init_database, close_database, get_database
 from auth import verify_user, register_user
 from oauth2 import build_auth_url, get_tokens, get_email_OAuth2, get_email_OIDC
-from utils import build_headers, validate_provider_config
+from utils import build_headers, validate_configs
 
+
+validate_configs(CONFIGS)
 
 app = Flask(__name__)
 app.secret_key = APP_SECRET_KEY
@@ -40,14 +42,7 @@ def login_page():
         verify = verify_user(email, password)
 
         if isinstance(verify, str):
-            verify_provider_name = CONFIGS[verify].get("name")
-            if not verify_provider_name:
-                abort(
-                    400,
-                    description=f'The provider with the id "{verify}" is not in the configuration file',
-                )
-
-            flash(f"Войдите через {verify_provider_name}", "info")
+            flash(f"Войдите через {CONFIGS[verify]['name']}", "info")
             return redirect(url_for("login_page"))
         elif verify:
             session["user"] = email
@@ -73,21 +68,7 @@ def register_page():
         registration = register_user(email, password)
 
         if isinstance(registration, str):
-            provider_id = CONFIGS.get(registration)
-            if not provider_id:
-                abort(
-                    400,
-                    description=f'The provider with the name "{provider_id}" is not in the configuration file',
-                )
-
-            name = provider_id.get("name")
-            if not name:
-                abort(
-                    400,
-                    description=f'The provider with the name "{name}" is not in the configuration file',
-                )
-
-            flash(f"Войдите через {name}", "info")
+            flash(f"Войдите через {CONFIGS[registration]['name']}", "info")
             return redirect(url_for("login_page"))
         elif registration:
             flash("Регистрация прошла успешно. Войдите в аккаунт", "success")
@@ -119,16 +100,16 @@ def bad_request(error: Any):
 
 
 @app.route(rule="/login/<provider>")
-def login_provider(provider: str | None):
-    config = validate_provider_config(provider, CONFIGS)
-    assert provider is not None
+def login_provider(provider: str):
+    config = CONFIGS[provider]
+    auth_type = config["auth_type"]
 
     return redirect(
         build_auth_url(
             provider,
             config["client_id"],
             config["scope"],
-            config["auth_type"]["type"],
+            auth_type["type"],
             config["auth_url"],
         )
     )
@@ -136,9 +117,6 @@ def login_provider(provider: str | None):
 
 @app.route(rule="/callback/<provider>")
 def callback(provider: str):
-    if provider not in CONFIGS:
-        abort(400, description="Provider not supported")
-
     if request.args.get("state") != session.get("oauth2_state"):
         session.pop("oauth2_state")
         abort(400, description="Invalid state")
@@ -149,54 +127,11 @@ def callback(provider: str):
     if not code:
         abort(400, description="No code received")
 
-    provider_config = CONFIGS.get(provider)
-    if not provider_config:
-        abort(
-            400,
-            description=f"Error in the provider's configuration file: {provider}'s config is empty",
-        )
-
-    auth_type = provider_config.get("auth_type")
-    if not auth_type:
-        abort(
-            400,
-            description='Error in the provider\'s configuration file: missing "auth_type"',
-        )
-
-    auth_type_value = auth_type.get("type")
-    if not auth_type_value:
-        abort(
-            400,
-            description='Error in the provider\'s configuration file: missing "type" in "auth_type"',
-        )
-
-    client_id = provider_config.get("client_id")
-    if not client_id:
-        abort(
-            400,
-            description='Error in the provider\'s configuration file: missing "client_id"',
-        )
-
-    client_secret = provider_config.get("client_secret")
-    if not client_secret:
-        abort(
-            400,
-            description='Error in the provider\'s configuration file: missing "client_secret"',
-        )
-
-    token_url = provider_config.get("token_url")
-    if not token_url:
-        abort(
-            400,
-            description='Error in the provider\'s configuration file: missing "token_url"',
-        )
-
-    token_request_headers = provider_config.get("token_request_headers")
-    if not token_request_headers:
-        abort(
-            400,
-            description='Error in the provider\'s configuration file: missing "token_request_headers"',
-        )
+    provider_config = CONFIGS[provider]
+    client_id = provider_config["client_id"]
+    client_secret = provider_config["client_secret"]
+    token_url = provider_config["token_url"]
+    token_request_headers = provider_config["token_request_headers"]
 
     tokens = get_tokens(
         provider,
@@ -207,77 +142,34 @@ def callback(provider: str):
         token_request_headers,
     )
 
-    params = auth_type.get("params")
-    if not params:
-        abort(
-            400,
-            description='Error in the provider\'s configuration file: missing "params"',
-        )
+    auth_type = provider_config["auth_type"]
+    auth_type_value = auth_type["type"]
+    params = auth_type["params"]
 
-    email = None
+    email = ""
     if auth_type_value == "OIDC":
         id_token = tokens.get("id_token")
 
         if not id_token:
             abort(400, description="Failed to obtain ID token")
 
-        jwks_uri = params.get("jwks_uri")
-        if not jwks_uri:
-            abort(
-                400,
-                description='Error in the provider\'s configuration file: missing "jwks_uri"',
-            )
-
-        algorithms = params.get("algorithms")
-        if not algorithms:
-            abort(
-                400,
-                description='Error in the provider\'s configuration file: missing "algorithms"',
-            )
-
-        issuer = params.get("issuer")
-        if not issuer:
-            abort(
-                400,
-                description='Error in the provider\'s configuration file: missing "issuer"',
-            )
-
         email = get_email_OIDC(
             id_token,
-            jwks_uri,
-            algorithms,
+            params["jwks_uri"],
+            params["algorithms"],
             client_id,
-            issuer,
+            params["issuer"],
         )
     elif auth_type_value == "OAuth2":
         access_token = tokens.get("access_token")
         if not access_token:
             abort(400, description="Failed to obtain access token")
 
-        user_info_url = params.get("user_info_url")
-        if not user_info_url:
-            abort(
-                400,
-                description='Error in the provider\'s configuration file: missing "user_info_url"',
-            )
-
-        email_request_headers = params.get("email_request_headers")
-        if not email_request_headers:
-            abort(
-                400,
-                description='Error in the provider\'s configuration file: missing "email_request_headers"',
-            )
-
         email_request_headers = build_headers(
-            email_request_headers, access_token=access_token
+            params["email_request_headers"], access_token=access_token
         )
-        if not email_request_headers:
-            abort(
-                400,
-                description='Error in the provider\'s configuration file: "email_request_headers" is empty',
-            )
 
-        email = get_email_OAuth2(user_info_url, email_request_headers)
+        email = get_email_OAuth2(params["user_info_url"], email_request_headers)
     else:
         abort(400, description="Authorization method is not supported")
 
@@ -297,19 +189,7 @@ def callback(provider: str):
             flash("У Вас уже есть аккаунт. Войдите при помощи пароля", "error")
             return redirect(url_for("login_page"))
         elif user_provider and user_provider != provider:
-            user_provider_config = CONFIGS.get(user_provider)
-            if not user_provider_config:
-                abort(
-                    400,
-                    description=f'The provider configuration with the id "{provider}" is absent',
-                )
-
-            user_provider_name = user_provider_config.get("name")
-            if not user_provider_name:
-                abort(
-                    400,
-                    description=f'The provider with the id "{provider}" is missing a name',
-                )
+            user_provider_name = CONFIGS[user_provider]["name"]
 
             flash(f"Войдите через {user_provider_name}", "error")
             return redirect(url_for("login_page"))

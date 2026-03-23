@@ -41,32 +41,58 @@ def build_headers(headers: Callable | dict, **params) -> dict:
     return headers
 
 
-def validate_provider_config(provider: str | None, configs: dict) -> dict:
-    from flask import abort
+def validate_configs(configs: dict) -> None:
+    if not configs:
+        raise ValueError("No providers configured")
 
-    if provider not in configs:
-        abort(400, description=f'Provider "{provider}" not supported')
-
-    assert provider is not None
-    config = configs[provider]
-    if not config:
-        abort(
-            400,
-            description=f"Error in the provider's configuration file: missing {provider}'s config",
-        )
-
-    required_fields = ["client_id", "scope", "auth_type", "auth_url"]
-    for field in required_fields:
-        if not config.get(field):
-            abort(
-                400,
-                description=f'Error in the provider\'s configuration file: missing "{field}"',
+    for provider, config in configs.items():
+        if not config:
+            raise ValueError(
+                f"Error in the provider's configuration file: missing {provider}'s config"
             )
 
-    if not config.get("auth_type", {}).get("type"):
-        abort(
-            400,
-            description='Error in the provider\'s configuration file: missing "type"',
-        )
+        common_fields = [
+            "name",
+            "client_id",
+            "client_secret",
+            "auth_url",
+            "token_url",
+            "scope",
+            "auth_type",
+            "token_request_headers",
+        ]
+        for field in common_fields:
+            if not config.get(field):
+                raise ValueError(
+                    f'Error in the provider\'s configuration file: "{provider}" missing "{field}"'
+                )
 
-    return config
+        auth_type = config.get("auth_type", {})
+        auth_type_value = auth_type.get("type")
+        if not auth_type_value:
+            raise ValueError(
+                f'Error in the provider\'s configuration file: "{provider}" missing "type" in "auth_type"'
+            )
+
+        params = auth_type.get("params")
+        if not params:
+            raise ValueError(
+                f'Error in the provider\'s configuration file: "{provider}" missing "params" in "auth_type"'
+            )
+
+        if auth_type_value == "OIDC":
+            for field in ["jwks_uri", "algorithms", "issuer"]:
+                if not params.get(field):
+                    raise ValueError(
+                        f'Error in the provider\'s configuration file: "{provider}" missing "{field}" in OIDC params'
+                    )
+        elif auth_type_value == "OAuth2":
+            for field in ["user_info_url", "email_request_headers"]:
+                if not params.get(field):
+                    raise ValueError(
+                        f'Error in the provider\'s configuration file: "{provider}" missing "{field}" in OAuth2 params'
+                    )
+        else:
+            raise ValueError(
+                f'Error in the provider\'s configuration file: "{provider}" unsupported auth_type "{auth_type_value}"'
+            )
