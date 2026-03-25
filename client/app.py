@@ -14,7 +14,7 @@ from typing import Any
 from config import CONFIGS, PERMANENT_SESSION_LIFETIME, APP_SECRET_KEY
 from database import init_database, close_database, get_database
 from auth import verify_user, register_user
-from oauth2 import build_auth_url, get_tokens, get_email_OAuth2, get_email_OIDC
+from oauth import build_auth_url, get_tokens, get_email_OAuth2, get_email_OIDC
 from utils import build_headers, validate_configs
 
 
