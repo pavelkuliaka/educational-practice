@@ -1,2 +1,2 @@
-# educational-practice
-Educational practice dedicated to OAuth2 and OpenID Connect
+# OAuth2 / OpenID Connect Educational Project
+Учебная практика посвящена изучению и практической реализации на языке **Python** и фреймворке **Flask** протоколов аутентификации **OAuth 2.0** и **OpenID Connect**, которые применяются для безопасного входа пользователей в веб-приложения через сторонние сервисы
