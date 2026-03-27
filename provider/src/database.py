@@ -4,8 +4,10 @@ from flask import g
 
 from typing import Any
 
+from config import DATABASE_PATH
 
-DATABASE = "./provider/users.db"
+
+DATABASE = DATABASE_PATH
 
 
 def get_database() -> Connection | Any:
@@ -64,3 +66,114 @@ def init_database() -> None:
         """)
 
         connection.commit()
+
+
+def get_user_by_email(email: str) -> dict | None:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+    user = cursor.fetchone()
+    return dict(user) if user else None
+
+
+def create_user(email: str, password_hash: str) -> None:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute(
+        "INSERT INTO users (email, password_hash) VALUES (?, ?)",
+        (email, password_hash),
+    )
+    database.commit()
+
+
+def get_app_by_client_id(client_id: str) -> dict | None:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute("SELECT * FROM apps WHERE client_id = ?", (client_id,))
+    app = cursor.fetchone()
+    return dict(app) if app else None
+
+
+def create_app(
+    client_id: str, client_secret: str, name: str, redirect_uri: str, owner_email: str
+) -> None:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute(
+        "INSERT INTO apps (client_id, client_secret, name, redirect_uri, owner_email) VALUES (?, ?, ?, ?, ?)",
+        (client_id, client_secret, name, redirect_uri, owner_email),
+    )
+    database.commit()
+
+
+def delete_app(client_id: str, owner_email: str) -> None:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute(
+        "DELETE FROM apps WHERE client_id = ? AND owner_email = ?",
+        (client_id, owner_email),
+    )
+    database.commit()
+
+
+def update_app_secret(client_id: str, new_secret: str, owner_email: str) -> None:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute(
+        "UPDATE apps SET client_secret = ? WHERE client_id = ? AND owner_email = ?",
+        (new_secret, client_id, owner_email),
+    )
+    database.commit()
+
+
+def get_apps_by_owner(owner_email: str) -> list[dict]:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute("SELECT * FROM apps WHERE owner_email = ?", (owner_email,))
+    apps = cursor.fetchall()
+    return [dict(app) for app in apps]
+
+
+def create_auth_code(
+    code: str, client_id: str, email: str, expires_at: str, nonce: str | None
+) -> None:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute(
+        "INSERT INTO auth_codes (code, client_id, email, expires_at, nonce) VALUES (?, ?, ?, ?, ?)",
+        (code, client_id, email, expires_at, nonce),
+    )
+    database.commit()
+
+
+def get_auth_code(code: str) -> dict | None:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute("SELECT * FROM auth_codes WHERE code = ?", (code,))
+    db_code = cursor.fetchone()
+    return dict(db_code) if db_code else None
+
+
+def delete_auth_code(code: str) -> None:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute("DELETE FROM auth_codes WHERE code = ?", (code,))
+    database.commit()
+
+
+def create_access_token(token: str, email: str, expires_at: str) -> None:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute(
+        "INSERT INTO access_tokens (token, email, expires_at) VALUES (?, ?, ?)",
+        (token, email, expires_at),
+    )
+    database.commit()
+
+
+def get_access_token(token: str) -> dict | None:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute("SELECT * FROM access_tokens WHERE token = ?", (token,))
+    token_data = cursor.fetchone()
+    return dict(token_data) if token_data else None

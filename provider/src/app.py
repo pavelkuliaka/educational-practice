@@ -26,10 +26,28 @@ from config import (
     PERMANENT_SESSION_LIFETIME,
     PRIVATE_KEY,
 )
-from database import init_database, close_database, get_database
+from database import (
+    init_database,
+    close_database,
+    get_user_by_email,
+    create_user,
+    get_app_by_client_id,
+    create_app,
+    delete_app as db_delete_app,
+    update_app_secret,
+    get_apps_by_owner,
+    create_auth_code,
+    get_auth_code,
+    delete_auth_code,
+    create_access_token,
+    get_access_token,
+)
 
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder=os.path.join(os.path.dirname(__file__), "..", "templates"),
+)
 app.secret_key = APP_SECRET_KEY
 
 init_database()
@@ -74,11 +92,7 @@ def login():
         flash("Заполните все поля", category="error")
         return redirect(url_for("login", next=next_url))
 
-    database = get_database()
-    cursor = database.cursor()
-
-    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-    user = cursor.fetchone()
+    user = get_user_by_email(email)
 
     if not user:
         flash("Аккаунта с таким email нет", category="error")
@@ -101,12 +115,7 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    database = get_database()
-    cursor = database.cursor()
-
-    cursor.execute("SELECT * FROM apps WHERE owner_email = ?", (session["user_email"],))
-    apps = cursor.fetchall()
-
+    apps = get_apps_by_owner(session["user_email"])
     return render_template("dashboard.html", email=session["user_email"], apps=apps)
 
 
@@ -138,17 +147,13 @@ def authorize():
     if not scope or "openid" not in scope.split():
         return jsonify({"error": "invalid_scope"}), 400
 
-    database = get_database()
-    cursor = database.cursor()
-
-    cursor.execute("SELECT * FROM apps WHERE client_id = ?", (client_id,))
-    client = cursor.fetchone()
+    client = get_app_by_client_id(client_id)
     if not client_id or client is None:
         return jsonify({"error": "invalid_client"}), 400
 
-    client = {"redirect_uris": [client["redirect_uri"]]} if client else None
+    client_redirect_uris = [client["redirect_uri"]]
 
-    if redirect_uri not in client["redirect_uris"]:
+    if redirect_uri not in client_redirect_uris:
         return jsonify({"error": "invalid_redirect_uri"}), 400
 
     if response_type != "code":
@@ -158,16 +163,17 @@ def authorize():
         email = request.form.get("email")
         password = request.form.get("password")
 
-        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-        user = cursor.fetchone()
+        user = get_user_by_email(email)
 
         if user and check_password_hash(user["password_hash"], password):
             code = secrets.token_hex(32)
-            cursor.execute(
-                "INSERT INTO auth_codes (code, client_id, email, expires_at, nonce) VALUES (?, ?, ?, ?, ?)",
-                (code, client_id, email, datetime.now() + timedelta(minutes=10), nonce),
+            create_auth_code(
+                code,
+                client_id,
+                email,
+                (datetime.now() + timedelta(minutes=10)).isoformat(),
+                nonce,
             )
-            database.commit()
 
             callback_url = f"{redirect_uri}?code={code}"
             if state:
@@ -190,40 +196,27 @@ def token():
     if grant_type != "authorization_code":
         return jsonify({"error": "unsupported_grant_type"}), 400
 
-    database = get_database()
-    cursor = database.cursor()
-
-    cursor.execute("SELECT * FROM apps WHERE client_id = ?", (client_id,))
-    client = cursor.fetchone()
+    client = get_app_by_client_id(client_id)
     if not client or client["client_secret"] != client_secret:
         return jsonify({"error": "invalid_client"}), 401
 
-    cursor.execute("SELECT * FROM auth_codes WHERE code = ?", (code,))
-    db_code = cursor.fetchone()
+    db_code = get_auth_code(code)
     if not db_code:
         return jsonify({"error": "invalid_grant"}), 400
 
     expires_at = datetime.fromisoformat(db_code["expires_at"])
     if expires_at < datetime.now():
-        cursor.execute("DELETE FROM auth_codes WHERE code = ?", (code,))
-        database.commit()
+        delete_auth_code(code)
         return jsonify({"error": "invalid_grant"}), 400
 
-    cursor.execute(
-        "SELECT redirect_uri FROM apps WHERE client_id = ?", (db_code["client_id"],)
-    )
-    client_row = cursor.fetchone()
-    if db_code["client_id"] != client_id or client_row["redirect_uri"] != redirect_uri:
+    if db_code["client_id"] != client_id or client["redirect_uri"] != redirect_uri:
         return jsonify({"error": "invalid_grant"}), 400
 
     nonce = db_code["nonce"]
     user_email = db_code["email"]
-    cursor.execute("SELECT * FROM users WHERE email = ?", (user_email,))
-    db_user = cursor.fetchone()
-    user_sub = db_user["email"]
+    user_sub = user_email
 
-    cursor.execute("DELETE FROM auth_codes WHERE code = ?", (code,))
-    database.commit()
+    delete_auth_code(code)
 
     access_token = secrets.token_hex(32)
 
@@ -243,11 +236,9 @@ def token():
         id_token_payload, PRIVATE_KEY, algorithm="RS256", headers={"kid": "default"}
     )
 
-    cursor.execute(
-        "INSERT INTO access_tokens (token, email, expires_at) VALUES (?, ?, ?)",
-        (access_token, user_email, now + timedelta(hours=1)),
+    create_access_token(
+        access_token, user_email, (now + timedelta(hours=1)).isoformat()
     )
-    database.commit()
 
     return jsonify(
         {
@@ -267,10 +258,7 @@ def userinfo():
 
     token = auth_header.split(" ")[1]
 
-    database = get_database()
-    cursor = database.cursor()
-    cursor.execute("SELECT * FROM access_tokens WHERE token = ?", (token,))
-    token_data = cursor.fetchone()
+    token_data = get_access_token(token)
     if not token_data:
         return jsonify({"error": "invalid_token"}), 401
 
@@ -280,12 +268,7 @@ def userinfo():
 
     user_email = token_data["email"]
 
-    cursor.execute("SELECT * FROM users WHERE email = ?", (user_email,))
-    user = cursor.fetchone()
-
-    return jsonify(
-        {"sub": user["email"], "email": user["email"], "email_verified": True}
-    )
+    return jsonify({"sub": user_email, "email": user_email, "email_verified": True})
 
 
 @app.route("/register/user", methods=["GET", "POST"])
@@ -306,11 +289,8 @@ def register_user():
             flash("Заполните все поля", category="warning")
             return redirect(url_for("register_user"))
 
-    database = get_database()
-    cursor = database.cursor()
-
-    cursor.execute("SELECT email FROM users WHERE email = ?", (email,))
-    if cursor.fetchone():
+    user = get_user_by_email(email)
+    if user:
         if request.is_json:
             return jsonify({"error": "user_already_exists"}), 400
 
@@ -319,10 +299,7 @@ def register_user():
 
     password_hash = generate_password_hash(password)
 
-    cursor.execute(
-        "INSERT INTO users (email, password_hash) VALUES (?, ?)", (email, password_hash)
-    )
-    database.commit()
+    create_user(email, password_hash)
 
     if request.is_json:
         return jsonify({"email": email}), 201
@@ -355,14 +332,7 @@ def register_app():
     )
     owner_email = session["user_email"]
 
-    database = get_database()
-    cursor = database.cursor()
-
-    cursor.execute(
-        "INSERT INTO apps (client_id, client_secret, name, redirect_uri, owner_email) VALUES (?, ?, ?, ?, ?)",
-        (client_id, client_secret, name, redirect_uri, owner_email),
-    )
-    database.commit()
+    create_app(client_id, client_secret, name, redirect_uri, owner_email)
 
     if request.is_json:
         return jsonify(
@@ -384,14 +354,7 @@ def register_app():
 @app.route("/app/<client_id>/delete", methods=["POST"])
 @login_required
 def delete_app(client_id):
-    database = get_database()
-    cursor = database.cursor()
-
-    cursor.execute(
-        "DELETE FROM apps WHERE client_id = ? AND owner_email = ?",
-        (client_id, session["user_email"]),
-    )
-    database.commit()
+    db_delete_app(client_id, session["user_email"])
 
     return redirect(url_for("dashboard"))
 
@@ -399,20 +362,10 @@ def delete_app(client_id):
 @app.route("/app/<client_id>/regenerate", methods=["POST"])
 @login_required
 def regenerate_secret(client_id):
-    database = get_database()
-    cursor = database.cursor()
-
     new_secret = secrets.token_hex(32)
-    cursor.execute(
-        "UPDATE apps SET client_secret = ? WHERE client_id = ? AND owner_email = ?",
-        (new_secret, client_id, session["user_email"]),
-    )
-    database.commit()
+    update_app_secret(client_id, new_secret, session["user_email"])
 
-    cursor.execute(
-        "SELECT name, redirect_uri FROM apps WHERE client_id = ?", (client_id,)
-    )
-    app = cursor.fetchone()
+    app = get_app_by_client_id(client_id)
 
     return render_template(
         "register_app_result.html",

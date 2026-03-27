@@ -1,18 +1,18 @@
-from dotenv import dotenv_values
+import os
+from dotenv import load_dotenv
 from datetime import timedelta
 
+load_dotenv("./provider/.env")
 
-env = dotenv_values("./provider/.env")
+env = os.environ
 
-# Секретный ключ для подписи сессий Flask
-APP_SECRET_KEY = env.get("APP_SECRET_KEY")
-if not APP_SECRET_KEY:
-    raise ValueError("Cofiguration file error: APP_SECRET_KEY missed")
+required = ["APP_SECRET_KEY", "JWT_SECRET"]
+missing = [key for key in required if not env.get(key)]
+if missing:
+    raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
 
-# Секретный ключ для подписи JWT токенов (ID Token)
-JWT_SECRET = env.get("JWT_SECRET")
-if not JWT_SECRET:
-    raise ValueError("Cofiguration file error: APP_SECRET_KEY missed")
+APP_SECRET_KEY = env["APP_SECRET_KEY"]
+JWT_SECRET = env["JWT_SECRET"]
 
 # RSA ключи для RS256
 RSA_PRIVATE_KEY = env.get("RSA_PRIVATE_KEY")
@@ -38,3 +38,5 @@ ISSUER_URL = "http://localhost:5001/oauth"
 
 # Время жизни сессии пользователя
 PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
+
+DATABASE_PATH = env.get("DATABASE_PATH", "./provider/users.db")
