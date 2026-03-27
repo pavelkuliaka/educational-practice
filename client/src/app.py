@@ -1,3 +1,8 @@
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from flask import (
     Flask,
     request,
@@ -6,7 +11,7 @@ from flask import (
     redirect,
     url_for,
     flash,
-    abort
+    abort,
 )
 from functools import wraps
 from typing import Any
