@@ -17,7 +17,12 @@ from functools import wraps
 from typing import Any
 
 from config import CONFIGS, PERMANENT_SESSION_LIFETIME, APP_SECRET_KEY
-from database import init_database, close_database, get_database
+from database import (
+    init_database,
+    close_database,
+    get_user_by_email,
+    create_user,
+)
 from auth import verify_user, register_user
 from oauth import build_auth_url, get_tokens, get_email_OAuth2, get_email_OIDC
 from utils import build_headers, validate_configs
@@ -193,11 +198,7 @@ def callback(provider: str):
     if not email:
         abort(400, description="Failed to obtain email")
 
-    database = get_database()
-    cursor = database.cursor()
-
-    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-    existing_user = cursor.fetchone()
+    existing_user = get_user_by_email(email)
 
     if existing_user:
         user_provider = existing_user["provider"]
@@ -216,11 +217,7 @@ def callback(provider: str):
 
             return redirect(url_for("dashboard"))
 
-    cursor.execute(
-        "INSERT INTO users (email, password_hash, provider) VALUES (?, ?, ?)",
-        (email, None, provider),
-    )
-    database.commit()
+    create_user(email, None, provider)
 
     session["user_email"] = email
     session.permanent = True

@@ -4,8 +4,10 @@ from flask import g
 
 from typing import Any
 
+from config import DATABASE_PATH
 
-DATABASE = "./client/users.db"
+
+DATABASE = DATABASE_PATH
 
 
 def get_database() -> Connection | Any:
@@ -38,3 +40,21 @@ def init_database() -> None:
         """)
 
         connection.commit()
+
+
+def get_user_by_email(email: str) -> dict | None:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+    user = cursor.fetchone()
+    return dict(user) if user else None
+
+
+def create_user(email: str, password_hash: str | None, provider: str | None) -> None:
+    database = get_database()
+    cursor = database.cursor()
+    cursor.execute(
+        "INSERT INTO users (email, password_hash, provider) VALUES (?, ?, ?)",
+        (email, password_hash, provider),
+    )
+    database.commit()

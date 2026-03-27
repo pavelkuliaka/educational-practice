@@ -4,6 +4,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import secrets
+from urllib.parse import urlencode
 from flask import session, url_for, abort
 import requests
 import jwt
@@ -35,7 +36,7 @@ def build_auth_url(
 
     session.permanent = True
 
-    return f"{auth_url}?{requests.compat.urlencode(params)}"
+    return f"{auth_url}?{urlencode(params)}"
 
 
 def get_tokens(
