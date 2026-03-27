@@ -19,16 +19,17 @@ def verify_user(email: str | None, password: str | None) -> bool | str:
     user = cursor.fetchone()
 
     if not user:
+        cursor.close()
         return False
 
     provider = user["provider"]
     if provider:
+        cursor.close()
         return provider
 
-    if check_password_hash(user["password_hash"], password):
-        return True
-
-    return False
+    result = check_password_hash(user["password_hash"], password)
+    cursor.close()
+    return result
 
 
 def register_user(email: str | None, password: str | None) -> bool | str:
@@ -55,10 +56,11 @@ def register_user(email: str | None, password: str | None) -> bool | str:
         )
 
         database.commit()
-
+        cursor.close()
         return True
 
     provider = existing_user["provider"]
+    cursor.close()
     if provider:
         return provider
 

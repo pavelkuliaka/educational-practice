@@ -1,8 +1,9 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
 
-load_dotenv("./client/.env")
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 env = os.environ
 
@@ -23,7 +24,7 @@ if missing:
 CONFIGS = {
     "google": {
         "name": "Google",
-        "icon": "static/icons/google.svg",
+        "icon": "/static/icons/google.svg",
         "client_id": env["GOOGLE_CLIENT_ID"],
         "client_secret": env["GOOGLE_CLIENT_SECRET"],
         "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
@@ -44,7 +45,7 @@ CONFIGS = {
     },
     "github": {
         "name": "GitHub",
-        "icon": "static/icons/github.svg",
+        "icon": "/static/icons/github.svg",
         "client_id": env["GITHUB_CLIENT_ID"],
         "client_secret": env["GITHUB_CLIENT_SECRET"],
         "auth_url": "https://github.com/login/oauth/authorize",
@@ -64,7 +65,7 @@ CONFIGS = {
     },
     "yandex": {
         "name": "Яндекс",
-        "icon": "static/icons/yandex.svg",
+        "icon": "/static/icons/yandex.svg",
         "client_id": env["YANDEX_CLIENT_ID"],
         "client_secret": env["YANDEX_CLIENT_SECRET"],
         "auth_url": "https://oauth.yandex.ru/authorize",
@@ -84,7 +85,7 @@ CONFIGS = {
     },
 }
 
-PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
+PERMANENT_SESSION_LIFETIME = timedelta(minutes=5)
 
 APP_SECRET_KEY = env["APP_SECRET_KEY"]
 

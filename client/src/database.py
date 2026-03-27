@@ -40,6 +40,7 @@ def init_database() -> None:
         """)
 
         connection.commit()
+        cursor.close()
 
 
 def get_user_by_email(email: str) -> dict | None:
@@ -47,7 +48,9 @@ def get_user_by_email(email: str) -> dict | None:
     cursor = database.cursor()
     cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
     user = cursor.fetchone()
-    return dict(user) if user else None
+    result = dict(user) if user else None
+    cursor.close()
+    return result
 
 
 def create_user(email: str, password_hash: str | None, provider: str | None) -> None:
@@ -58,3 +61,4 @@ def create_user(email: str, password_hash: str | None, provider: str | None) -> 
         (email, password_hash, provider),
     )
     database.commit()
+    cursor.close()

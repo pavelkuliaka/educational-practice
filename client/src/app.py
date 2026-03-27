@@ -30,7 +30,11 @@ from utils import build_headers, validate_configs
 
 validate_configs(CONFIGS)
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder=os.path.join(os.path.dirname(__file__), "..", "templates"),
+    static_folder=os.path.join(os.path.dirname(__file__), "..", "static"),
+)
 app.secret_key = APP_SECRET_KEY
 
 init_database()
@@ -123,6 +127,9 @@ def bad_request(error: Any):
 
 @app.route(rule="/login/<provider>")
 def login_provider(provider: str):
+    if provider not in CONFIGS:
+        abort(404, description="Provider not found")
+
     config = CONFIGS[provider]
     auth_type = config["auth_type"]
 
@@ -139,6 +146,9 @@ def login_provider(provider: str):
 
 @app.route(rule="/callback/<provider>")
 def callback(provider: str):
+    if provider not in CONFIGS:
+        abort(404, description="Provider not found")
+
     if request.args.get("state") != session.get("oauth2_state"):
         session.pop("oauth2_state")
         abort(400, description="Invalid state")
