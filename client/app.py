@@ -6,9 +6,9 @@ from flask import (
     redirect,
     url_for,
     flash,
-    abort,
+    abort
 )
-
+from functools import wraps
 from typing import Any
 
 from config import CONFIGS, PERMANENT_SESSION_LIFETIME, APP_SECRET_KEY
@@ -31,10 +31,20 @@ app.config["PERMANENT_SESSION_LIFETIME"] = PERMANENT_SESSION_LIFETIME
 app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 
 
+def login_required(function):
+    @wraps(function)
+    def decorated_function(*args, **kwargs):
+        if "user_email" not in session:
+            return redirect(url_for("login", next=url_for("dashboard")))
+        return function(*args, **kwargs)
+
+    return decorated_function
+
+
 @app.route(rule="/login", methods=["GET", "POST"])
-def login_page():
-    if "user" in session:
-        return redirect(url_for("dashboard_page"))
+def login():
+    if "user_email" in session:
+        return redirect(url_for("dashboard"))
     if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
@@ -43,14 +53,14 @@ def login_page():
 
         if isinstance(verify, str):
             flash(f"Войдите через {CONFIGS[verify]['name']}", "info")
-            return redirect(url_for("login_page"))
+            return redirect(url_for("login"))
         elif verify:
-            session["user"] = email
+            session["user_email"] = email
             session.permanent = True
-            return redirect(url_for("dashboard_page"))
+            return redirect(url_for("dashboard"))
         else:
             flash("Неверный email или пароль", "error")
-            return redirect(url_for("login_page"))
+            return redirect(url_for("login"))
 
     providers = [
         {"id": key, "name": CONFIGS[key].get("name"), "icon": CONFIGS[key].get("icon")}
@@ -60,7 +70,9 @@ def login_page():
 
 
 @app.route(rule="/register", methods=["GET", "POST"])
-def register_page():
+def register():
+    if "user_email" in session:
+        return redirect(url_for("dashboard"))
     if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
@@ -69,24 +81,24 @@ def register_page():
 
         if isinstance(registration, str):
             flash(f"Войдите через {CONFIGS[registration]['name']}", "info")
-            return redirect(url_for("login_page"))
+            return redirect(url_for("login"))
         elif registration:
             flash("Регистрация прошла успешно. Войдите в аккаунт", "success")
-            return redirect(url_for("login_page"))
+            return redirect(url_for("login"))
         else:
             flash("У Вас уже есть аккаунт. Войдите при помощи пароля", "error")
-            return redirect(url_for("login_page"))
+            return redirect(url_for("login"))
 
     return render_template("register.html")
 
 
 @app.route(rule="/")
-def home_page():
-    if "user" in session:
-        return redirect(url_for("dashboard_page"))
+def home():
+    if "user_email" in session:
+        return redirect(url_for("dashboard"))
 
     session.clear()
-    return redirect(url_for("login_page"))
+    return redirect(url_for("login"))
 
 
 @app.errorhandler(code_or_exception=404)
@@ -183,21 +195,21 @@ def callback(provider: str):
     existing_user = cursor.fetchone()
 
     if existing_user:
-        user_provider = existing_user.get("provider")
+        user_provider = existing_user["provider"]
 
         if not user_provider:
             flash("У Вас уже есть аккаунт. Войдите при помощи пароля", "error")
-            return redirect(url_for("login_page"))
+            return redirect(url_for("login"))
         elif user_provider and user_provider != provider:
             user_provider_name = CONFIGS[user_provider]["name"]
 
             flash(f"Войдите через {user_provider_name}", "error")
-            return redirect(url_for("login_page"))
+            return redirect(url_for("login"))
         else:
-            session["user"] = email
+            session["user_email"] = email
             session.permanent = True
 
-            return redirect(url_for("dashboard_page"))
+            return redirect(url_for("dashboard"))
 
     cursor.execute(
         "INSERT INTO users (email, password_hash, provider) VALUES (?, ?, ?)",
@@ -205,24 +217,24 @@ def callback(provider: str):
     )
     database.commit()
 
-    session["user"] = email
+    session["user_email"] = email
     session.permanent = True
 
     flash("Вы успешно вошли", "success")
-    return redirect(url_for("dashboard_page"))
+    return redirect(url_for("dashboard"))
 
 
 @app.route(rule="/dashboard")
-def dashboard_page():
-    if "user" not in session:
+def dashboard():
+    if "user_email" not in session:
         return redirect(url_for("logout"))
-    return render_template("dashboard.html", user_email=session["user"])
+    return render_template("dashboard.html", user_email=session["user_email"])
 
 
 @app.route(rule="/logout")
 def logout():
     session.clear()
-    return redirect(url_for("login_page"))
+    return redirect(url_for("login"))
 
 
 def main() -> None:
