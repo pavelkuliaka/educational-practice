@@ -53,7 +53,7 @@ def register_user(email: str | None, password: str | None) -> bool | str:
 
         return True
 
-    provider = existing_user.get("provider")
+    provider = existing_user["provider"]
     if provider:
         return provider
 

@@ -9,7 +9,7 @@
             <p class="text-gray-600 mt-2">Войдите или зарегистрируйтесь</p>
         </div>
         <!-- Форма авторизации -->
-        <form method="POST" action="{{ url_for('login_page') }}" class="space-y-4">
+        <form method="POST" action="{{ url_for('login') }}" class="space-y-4">
             <!-- Поле email -->
             <div>
                 <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
@@ -49,7 +49,7 @@
             </button>
             
             <!-- Кнопка регистрации -->
-            <a href="{{ url_for('register_page') }}"
+            <a href="{{ url_for('register', next=url_for('login')) }}"
                 class="block w-full text-center bg-white hover:bg-gray-50 text-blue-600 font-semibold py-3 px-4 rounded-lg border-2 border-blue-600 transition duration-200 transform hover:scale-[1.02]">
                 Зарегистрироваться
             </a>
