@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}{% endblock %}</title>
+        <!-- TailwindCSS для стилей -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <!-- Font Awesome для иконок соцсетей -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    </head>
+    <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4 relative {% block body_class %}{% endblock %}">
+        {% import 'components/flash_messages.html' as flash %}
+        {{ flash.render_toast_messages() }}
+        
+        {% block content %}{% endblock %}
+        
+        {% block scripts %}{% endblock %}
+    </body>
+</html>
