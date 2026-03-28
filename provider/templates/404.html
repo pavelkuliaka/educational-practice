@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Ошибка 404{% endblock %}
+{% block content %}
+    <div class="bg-gray-800 border border-gray-700 rounded-xl w-full max-w-md p-8 text-center">
+        <div class="text-6xl font-bold text-gray-500 mb-2">404</div>
+        <h1 class="text-2xl font-semibold mb-2">Страница не найдена</h1>
+        <p class="text-gray-400 mb-6">Запрашиваемая страница не существует</p>
+        <a href="{{ url_for('dashboard') }}" class="inline-block bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-md transition-colors">
+            К приложениям
+        </a>
+    </div>
+{% endblock %}
