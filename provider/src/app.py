@@ -1,7 +1,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask import (
     Flask,
@@ -251,7 +251,7 @@ def token():
 
     access_token = secrets.token_hex(32)
 
-    now = datetime.now()
+    now = datetime.utcnow()
     id_token_payload = {
         "iss": ISSUER_URL,
         "sub": user_sub,
