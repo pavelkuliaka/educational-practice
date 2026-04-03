@@ -13,7 +13,7 @@ from flask import (
     url_for,
     flash,
 )
-import base64
+from urllib.parse import urlparse
 import secrets
 from datetime import datetime, timedelta
 import jwt
@@ -26,6 +26,7 @@ from config import (
     PERMANENT_SESSION_LIFETIME,
     PRIVATE_KEY,
 )
+from crypto import build_jwks, verify_pkce
 from database import (
     init_database,
     close_database,
@@ -68,11 +69,18 @@ def bad_request(error):
     return render_template("400.html", error=str(error)), 400
 
 
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+
+
 def login_required(function):
     @wraps(function)
     def decorated_function(*args, **kwargs):
         if "user_email" not in session:
-            return redirect(url_for("login", next=url_for("dashboard")))
+            next_url = request.args.get("next", url_for("dashboard"))
+            parsed = urlparse(next_url)
+            if parsed.netloc and parsed.netloc not in ALLOWED_HOSTS:
+                next_url = url_for("dashboard")
+            return redirect(url_for("login", next=next_url))
         return function(*args, **kwargs)
 
     return decorated_function
@@ -130,7 +138,7 @@ def openid_config():
             "jwks_uri": f"{ISSUER_URL}/oauth/jwks.json",
             "response_types_supported": ["code"],
             "subject_types_supported": ["public"],
-            "id_token_signing_alg_values_supported": ["HS256"],
+            "id_token_signing_alg_values_supported": ["RS256"],
         }
     )
 
@@ -143,12 +151,21 @@ def authorize():
     response_type = request.args.get("response_type")
     state = request.args.get("state")
     nonce = request.args.get("nonce")
+    code_challenge = request.args.get("code_challenge")
+    code_challenge_method = request.args.get("code_challenge_method") or "plain"
+
+    if not state:
+        return jsonify({"error": "invalid_request"}), 400
+
+    origin = request.headers.get("Origin")
+    if origin and origin != request.host_url.rstrip("/"):
+        return jsonify({"error": "invalid_request"}), 400
 
     if not scope or "openid" not in scope.split():
         return jsonify({"error": "invalid_scope"}), 400
 
     client = get_app_by_client_id(client_id)
-    if not client_id or client is None:
+    if client is None:
         return jsonify({"error": "invalid_client"}), 400
 
     client_redirect_uris = [client["redirect_uri"]]
@@ -170,9 +187,12 @@ def authorize():
             create_auth_code(
                 code,
                 client_id,
+                user["user_id"],
                 email,
                 (datetime.now() + timedelta(minutes=10)).isoformat(),
                 nonce,
+                code_challenge,
+                code_challenge_method,
             )
 
             callback_url = f"{redirect_uri}?code={code}"
@@ -192,6 +212,7 @@ def token():
     client_id = request.form.get("client_id")
     client_secret = request.form.get("client_secret")
     redirect_uri = request.form.get("redirect_uri")
+    code_verifier = request.form.get("code_verifier")
 
     if grant_type != "authorization_code":
         return jsonify({"error": "unsupported_grant_type"}), 400
@@ -212,9 +233,19 @@ def token():
     if db_code["client_id"] != client_id or client["redirect_uri"] != redirect_uri:
         return jsonify({"error": "invalid_grant"}), 400
 
+    if db_code.get("code_challenge"):
+        if not code_verifier:
+            return jsonify({"error": "invalid_grant"}), 400
+        if not verify_pkce(
+            code_verifier,
+            db_code["code_challenge"],
+            db_code["code_challenge_method"],
+        ):
+            return jsonify({"error": "invalid_grant"}), 400
+
     nonce = db_code["nonce"]
     user_email = db_code["email"]
-    user_sub = user_email
+    user_sub = db_code["user_id"]
 
     delete_auth_code(code)
 
@@ -227,6 +258,7 @@ def token():
         "aud": client_id,
         "exp": now + timedelta(hours=1),
         "iat": now,
+        "auth_time": int(now.timestamp()),
         "email": user_email,
     }
     if nonce:
@@ -376,34 +408,7 @@ def regenerate_secret(client_id):
 
 
 def jwks():
-
-    public_key = PRIVATE_KEY.public_key()
-
-    n = public_key.public_numbers().n
-    e = public_key.public_numbers().e
-
-    def int_to_base64url(i):
-        byte_length = (i.bit_length() + 7) // 8
-        return (
-            base64.urlsafe_b64encode(i.to_bytes(byte_length, "big"))
-            .rstrip(b"=")
-            .decode("utf-8")
-        )
-
-    return jsonify(
-        {
-            "keys": [
-                {
-                    "kid": "default",
-                    "kty": "RSA",
-                    "use": "sig",
-                    "alg": "RS256",
-                    "n": int_to_base64url(n),
-                    "e": int_to_base64url(e),
-                }
-            ]
-        }
-    )
+    return jsonify(build_jwks(PRIVATE_KEY))
 
 
 app.add_url_rule("/oauth/jwks.json", "jwks", jwks)
