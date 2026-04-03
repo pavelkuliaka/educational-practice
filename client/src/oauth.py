@@ -9,6 +9,7 @@ from flask import session, url_for, abort
 import requests
 import jwt
 from utils import extract_email
+from config import REDIRECT_URI
 
 
 def build_auth_url(
@@ -20,7 +21,7 @@ def build_auth_url(
 
     params = {
         "client_id": client_id,
-        "redirect_uri": f"http://localhost:5000/callback/{provider}",
+        "redirect_uri": f"{REDIRECT_URI}/callback/{provider}",
         "response_type": "code",
         "scope": scope,
         "state": state,
