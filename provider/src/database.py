@@ -1,4 +1,5 @@
 import sqlite3
+import uuid
 from sqlite3 import Connection
 from flask import g
 
@@ -33,6 +34,7 @@ def init_database() -> None:
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
+                user_id TEXT PRIMARY KEY,
                 email TEXT UNIQUE NOT NULL,
                 password_hash TEXT,
                 provider TEXT
@@ -52,9 +54,12 @@ def init_database() -> None:
             CREATE TABLE IF NOT EXISTS auth_codes (
                 code TEXT PRIMARY KEY,
                 client_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
                 email TEXT NOT NULL,
                 expires_at TIMESTAMP NOT NULL,
-                nonce TEXT
+                nonce TEXT,
+                code_challenge TEXT,
+                code_challenge_method TEXT
             )
         """)
         cursor.execute("""
@@ -76,14 +81,18 @@ def get_user_by_email(email: str) -> dict | None:
     return dict(user) if user else None
 
 
-def create_user(email: str, password_hash: str) -> None:
+def create_user(
+    email: str, password_hash: str | None = None, provider: str | None = None
+) -> str:
     database = get_database()
     cursor = database.cursor()
+    user_id = str(uuid.uuid4())
     cursor.execute(
-        "INSERT INTO users (email, password_hash) VALUES (?, ?)",
-        (email, password_hash),
+        "INSERT INTO users (user_id, email, password_hash, provider) VALUES (?, ?, ?, ?)",
+        (user_id, email, password_hash, provider),
     )
     database.commit()
+    return user_id
 
 
 def get_app_by_client_id(client_id: str) -> dict | None:
@@ -135,13 +144,29 @@ def get_apps_by_owner(owner_email: str) -> list[dict]:
 
 
 def create_auth_code(
-    code: str, client_id: str, email: str, expires_at: str, nonce: str | None
+    code: str,
+    client_id: str,
+    user_id: str,
+    email: str,
+    expires_at: str,
+    nonce: str | None,
+    code_challenge: str | None = None,
+    code_challenge_method: str | None = None,
 ) -> None:
     database = get_database()
     cursor = database.cursor()
     cursor.execute(
-        "INSERT INTO auth_codes (code, client_id, email, expires_at, nonce) VALUES (?, ?, ?, ?, ?)",
-        (code, client_id, email, expires_at, nonce),
+        "INSERT INTO auth_codes (code, client_id, user_id, email, expires_at, nonce, code_challenge, code_challenge_method) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            code,
+            client_id,
+            user_id,
+            email,
+            expires_at,
+            nonce,
+            code_challenge,
+            code_challenge_method,
+        ),
     )
     database.commit()
 
