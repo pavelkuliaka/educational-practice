@@ -14,7 +14,7 @@ def get_database() -> Connection | Any:
     database = getattr(g, "_database", None)
 
     if database is None:
-        database = g._database = sqlite3.connect(DATABASE)
+        database = g._database = sqlite3.connect(DATABASE, check_same_thread=False)
         database.row_factory = sqlite3.Row
 
     return database
@@ -40,7 +40,6 @@ def init_database() -> None:
         """)
 
         connection.commit()
-        cursor.close()
 
 
 def get_user_by_email(email: str) -> dict | None:
@@ -48,9 +47,7 @@ def get_user_by_email(email: str) -> dict | None:
     cursor = database.cursor()
     cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
     user = cursor.fetchone()
-    result = dict(user) if user else None
-    cursor.close()
-    return result
+    return dict(user) if user else None
 
 
 def create_user(email: str, password_hash: str | None, provider: str | None) -> None:
@@ -61,4 +58,3 @@ def create_user(email: str, password_hash: str | None, provider: str | None) -> 
         (email, password_hash, provider),
     )
     database.commit()
-    cursor.close()

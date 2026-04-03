@@ -14,7 +14,6 @@ from flask import (
     abort,
 )
 from functools import wraps
-from typing import Any
 
 from config import CONFIGS, PERMANENT_SESSION_LIFETIME, APP_SECRET_KEY
 from database import (
@@ -55,7 +54,7 @@ def login_required(function):
     return decorated_function
 
 
-@app.route(rule="/login", methods=["GET", "POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
     if "user_email" in session:
         return redirect(url_for("dashboard"))
@@ -83,7 +82,7 @@ def login():
     return render_template("login.html", providers=providers)
 
 
-@app.route(rule="/register", methods=["GET", "POST"])
+@app.route("/register", methods=["GET", "POST"])
 def register():
     if "user_email" in session:
         return redirect(url_for("dashboard"))
@@ -106,7 +105,7 @@ def register():
     return render_template("register.html")
 
 
-@app.route(rule="/")
+@app.route("/")
 def home():
     if "user_email" in session:
         return redirect(url_for("dashboard"))
@@ -115,17 +114,17 @@ def home():
     return redirect(url_for("login"))
 
 
-@app.errorhandler(code_or_exception=404)
-def page_not_found(error: Any):
+@app.errorhandler(404)
+def page_not_found(error):
     return render_template("404.html"), 404
 
 
-@app.errorhandler(code_or_exception=400)
-def bad_request(error: Any):
-    return render_template("400.html", error=error.description), 400
+@app.errorhandler(400)
+def bad_request(error):
+    return render_template("400.html", error=str(error)), 400
 
 
-@app.route(rule="/login/<provider>")
+@app.route("/login/<provider>")
 def login_provider(provider: str):
     if provider not in CONFIGS:
         abort(404, description="Provider not found")
@@ -144,7 +143,7 @@ def login_provider(provider: str):
     )
 
 
-@app.route(rule="/callback/<provider>")
+@app.route("/callback/<provider>")
 def callback(provider: str):
     if provider not in CONFIGS:
         abort(404, description="Provider not found")
@@ -236,14 +235,13 @@ def callback(provider: str):
     return redirect(url_for("dashboard"))
 
 
-@app.route(rule="/dashboard")
+@app.route("/dashboard")
+@login_required
 def dashboard():
-    if "user_email" not in session:
-        return redirect(url_for("logout"))
     return render_template("dashboard.html", user_email=session["user_email"])
 
 
-@app.route(rule="/logout")
+@app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))

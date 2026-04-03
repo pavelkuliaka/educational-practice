@@ -1,14 +1,14 @@
 import os
-from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
 
-load_dotenv(Path(__file__).parent.parent / ".env")
+load_dotenv("./client/.env")
 
 env = os.environ
 
 required = [
     "APP_SECRET_KEY",
+    "REDIRECT_URI",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
     "GITHUB_CLIENT_ID",
@@ -88,5 +88,7 @@ CONFIGS = {
 PERMANENT_SESSION_LIFETIME = timedelta(minutes=5)
 
 APP_SECRET_KEY = env["APP_SECRET_KEY"]
+
+REDIRECT_URI = env["REDIRECT_URI"]
 
 DATABASE_PATH = env.get("DATABASE_PATH", "./client/users.db")
