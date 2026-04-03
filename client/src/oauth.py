@@ -59,7 +59,11 @@ def get_tokens(
     token_response = requests.post(token_url, token_data, headers=token_request_headers)
 
     if token_response.status_code != 200:
-        abort(400, description="Invalid status code")
+        try:
+            error_data = token_response.json()
+            abort(400, description=error_data.get("error", "Invalid status code"))
+        except ValueError:
+            abort(400, description=f"Invalid status code: {token_response.status_code}")
 
     tokens = token_response.json()
 
@@ -103,9 +107,16 @@ def get_email_OAuth2(user_info_url: str, headers: dict) -> str:
     user_response = requests.get(url=user_info_url, headers=headers)
 
     if user_response.status_code != 200:
-        abort(400, description="Invalid status code")
+        try:
+            user_data = user_response.json()
+            abort(400, description=user_data.get("error", "Failed to get user info"))
+        except ValueError:
+            abort(400, description=f"Invalid status code: {user_response.status_code}")
 
     user_data = user_response.json()
+
+    if "error" in user_data:
+        abort(400, description=user_data.get("error", "Failed to get user info"))
 
     email = extract_email(user_data)
 

@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from datetime import timedelta
 
-load_dotenv("./client/.env")
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 env = os.environ
 
@@ -83,6 +83,27 @@ CONFIGS = {
         },
         "token_request_headers": {"Accept": "application/json"},
     },
+    "my_service": {
+        "name": "My service",
+        "icon": "",
+        "client_id": env["MY_SERVICE_CLIENT_ID"],
+        "client_secret": env["MY_SERVICE_CLIENT_SECRET"],
+        "auth_url": "http://localhost:5001/oauth/authorize",
+        "token_url": "http://localhost:5001/oauth/token",
+        "scope": "openid email",
+        "auth_type": {
+            "type": "OIDC",
+            "params": {
+                "issuer": "http://localhost:5001/oauth",
+                "jwks_uri": "http://localhost:5001/oauth/jwks.json",
+                "algorithms": ["RS256"],
+            },
+        },
+        "token_request_headers": {
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+    },
 }
 
 PERMANENT_SESSION_LIFETIME = timedelta(minutes=5)
@@ -91,4 +112,7 @@ APP_SECRET_KEY = env["APP_SECRET_KEY"]
 
 REDIRECT_URI = env["REDIRECT_URI"]
 
-DATABASE_PATH = env.get("DATABASE_PATH", "./client/users.db")
+database_path = env.get("DATABASE_PATH", "users.db")
+if not os.path.isabs(database_path):
+    database_path = os.path.join(os.path.dirname(__file__), "..", database_path)
+DATABASE_PATH = database_path
