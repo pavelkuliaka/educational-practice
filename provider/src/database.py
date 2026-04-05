@@ -59,13 +59,16 @@ def init_database() -> None:
                 expires_at TIMESTAMP NOT NULL,
                 nonce TEXT,
                 code_challenge TEXT,
-                code_challenge_method TEXT
+                code_challenge_method TEXT,
+                scope TEXT
             )
         """)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS access_tokens (
                 token TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
                 email TEXT NOT NULL,
+                scope TEXT NOT NULL,
                 expires_at TIMESTAMP NOT NULL
             )
         """)
@@ -152,11 +155,12 @@ def create_auth_code(
     nonce: str | None,
     code_challenge: str | None = None,
     code_challenge_method: str | None = None,
+    scope: str | None = None,
 ) -> None:
     database = get_database()
     cursor = database.cursor()
     cursor.execute(
-        "INSERT INTO auth_codes (code, client_id, user_id, email, expires_at, nonce, code_challenge, code_challenge_method) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO auth_codes (code, client_id, user_id, email, expires_at, nonce, code_challenge, code_challenge_method, scope) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             code,
             client_id,
@@ -166,6 +170,7 @@ def create_auth_code(
             nonce,
             code_challenge,
             code_challenge_method,
+            scope,
         ),
     )
     database.commit()
@@ -186,12 +191,14 @@ def delete_auth_code(code: str) -> None:
     database.commit()
 
 
-def create_access_token(token: str, email: str, expires_at: str) -> None:
+def create_access_token(
+    token: str, user_id: str, email: str, scope: str, expires_at: str
+) -> None:
     database = get_database()
     cursor = database.cursor()
     cursor.execute(
-        "INSERT INTO access_tokens (token, email, expires_at) VALUES (?, ?, ?)",
-        (token, email, expires_at),
+        "INSERT INTO access_tokens (token, user_id, email, scope, expires_at) VALUES (?, ?, ?, ?, ?)",
+        (token, user_id, email, scope, expires_at),
     )
     database.commit()
 

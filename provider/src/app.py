@@ -139,6 +139,7 @@ def openid_config():
             "response_types_supported": ["code"],
             "subject_types_supported": ["public"],
             "id_token_signing_alg_values_supported": ["RS256"],
+            "scopes_supported": ["openid", "profile", "email"],
         }
     )
 
@@ -161,7 +162,13 @@ def authorize():
     if origin and origin != request.host_url.rstrip("/"):
         return jsonify({"error": "invalid_request"}), 400
 
-    if not scope or "openid" not in scope.split():
+    ALLOWED_SCOPES = {"openid", "profile", "email"}
+
+    if not scope:
+        return jsonify({"error": "invalid_scope"}), 400
+
+    requested_scopes = scope.split()
+    if not all(s in ALLOWED_SCOPES for s in requested_scopes):
         return jsonify({"error": "invalid_scope"}), 400
 
     client = get_app_by_client_id(client_id)
@@ -193,6 +200,7 @@ def authorize():
                 nonce,
                 code_challenge,
                 code_challenge_method,
+                scope,
             )
 
             callback_url = f"{redirect_uri}?code={code}"
@@ -246,40 +254,50 @@ def token():
     nonce = db_code["nonce"]
     user_email = db_code["email"]
     user_sub = db_code["user_id"]
+    auth_scope = db_code.get("scope", "")
+    scope_list = auth_scope.split() if auth_scope else []
 
     delete_auth_code(code)
 
     access_token = secrets.token_hex(32)
 
     now = datetime.utcnow()
-    id_token_payload = {
-        "iss": ISSUER_URL,
-        "sub": user_sub,
-        "aud": client_id,
-        "exp": now + timedelta(hours=1),
-        "iat": now,
-        "auth_time": int(now.timestamp()),
-        "email": user_email,
-    }
-    if nonce:
-        id_token_payload["nonce"] = nonce
 
-    id_token = jwt.encode(
-        id_token_payload, PRIVATE_KEY, algorithm="RS256", headers={"kid": "default"}
-    )
+    if "openid" in scope_list:
+        id_token_payload = {
+            "iss": ISSUER_URL,
+            "sub": user_sub,
+            "aud": client_id,
+            "exp": now + timedelta(hours=1),
+            "iat": now,
+            "auth_time": int(now.timestamp()),
+            "email": user_email,
+        }
+        if nonce:
+            id_token_payload["nonce"] = nonce
+
+        id_token = jwt.encode(
+            id_token_payload, PRIVATE_KEY, algorithm="RS256", headers={"kid": "default"}
+        )
 
     create_access_token(
-        access_token, user_email, (now + timedelta(hours=1)).isoformat()
+        access_token,
+        user_sub,
+        user_email,
+        auth_scope,
+        (now + timedelta(hours=1)).isoformat(),
     )
 
-    return jsonify(
-        {
-            "access_token": access_token,
-            "token_type": "Bearer",
-            "expires_in": 3600,
-            "id_token": id_token,
-        }
-    )
+    response = {
+        "access_token": access_token,
+        "token_type": "Bearer",
+        "expires_in": 3600,
+        "scope": auth_scope,
+    }
+    if "openid" in scope_list:
+        response["id_token"] = id_token
+
+    return jsonify(response)
 
 
 @app.route("/oauth/userinfo")
@@ -298,9 +316,19 @@ def userinfo():
     if token_expires < datetime.now():
         return jsonify({"error": "invalid_token"}), 401
 
-    user_email = token_data["email"]
+    scope_list = token_data.get("scope", "").split() if token_data.get("scope") else []
 
-    return jsonify({"sub": user_email, "email": user_email, "email_verified": True})
+    result = {}
+    if "openid" in scope_list or "profile" in scope_list:
+        result["sub"] = token_data["user_id"]
+    if "email" in scope_list:
+        result["email"] = token_data["email"]
+        result["email_verified"] = True
+
+    if not result:
+        return jsonify({"error": "insufficient_scope"}), 403
+
+    return jsonify(result)
 
 
 @app.route("/register/user", methods=["GET", "POST"])
