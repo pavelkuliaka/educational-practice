@@ -15,7 +15,7 @@ from flask import (
 )
 from urllib.parse import urlparse
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import jwt
 from functools import wraps
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -261,7 +261,7 @@ def token():
 
     access_token = secrets.token_hex(32)
 
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
 
     if "openid" in scope_list:
         id_token_payload = {
