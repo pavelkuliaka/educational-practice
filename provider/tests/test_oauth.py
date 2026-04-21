@@ -1,12 +1,8 @@
-import json
 import os
 import sys
 from datetime import datetime, timedelta
 
 import pytest
-
-src_path = os.path.join(os.path.dirname(__file__), "..", "src")
-sys.path.insert(0, src_path)
 
 from src.database import (
     create_app,
@@ -14,11 +10,12 @@ from src.database import (
     create_access_token,
 )
 
+src_path = os.path.join(os.path.dirname(__file__), "..", "src")
+sys.path.insert(0, src_path)
+
 
 @pytest.fixture
 def test_app(app_context):
-    from src.database import get_app_by_client_id
-    from src.config import DATABASE_PATH
     import secrets
 
     client_id = secrets.token_hex(16)

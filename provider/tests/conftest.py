@@ -48,7 +48,7 @@ def app_context(app):
 
 @pytest.fixture
 def test_user(app_context):
-    from src.database import create_user, get_user_by_email
+    from src.database import create_user
     import uuid
 
     email = f"test-{uuid.uuid4().hex[:8]}@example.com"
