@@ -3,29 +3,28 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from flask import (
-    Flask,
-    request,
-    render_template,
-    session,
-    redirect,
-    url_for,
-    flash,
-    abort,
-)
 from functools import wraps
 
-from config import CONFIGS, PERMANENT_SESSION_LIFETIME, APP_SECRET_KEY
+from auth import register_user, verify_user
+from config import APP_SECRET_KEY, CONFIGS, PERMANENT_SESSION_LIFETIME
 from database import (
-    init_database,
     close_database,
-    get_user_by_email,
     create_user,
+    get_user_by_email,
+    init_database,
 )
-from auth import verify_user, register_user
-from oauth import build_auth_url, get_tokens, get_email_OAuth2, get_email_OIDC
+from flask import (
+    Flask,
+    abort,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from oauth import build_auth_url, get_email_OAuth2, get_email_OIDC, get_tokens
 from utils import build_headers, validate_configs
-
 
 validate_configs(CONFIGS)
 

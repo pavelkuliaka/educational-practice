@@ -1,11 +1,9 @@
 import sqlite3
 from sqlite3 import Connection
-from flask import g
-
 from typing import Any
 
 from config import DATABASE_PATH
-
+from flask import g
 
 DATABASE = DATABASE_PATH
 
