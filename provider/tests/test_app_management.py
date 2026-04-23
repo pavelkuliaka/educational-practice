@@ -1,7 +1,8 @@
-import pytest
-import secrets
 import os
+import secrets
 import sys
+
+import pytest
 
 src_path = os.path.join(os.path.dirname(__file__), "..", "src")
 sys.path.insert(0, src_path)

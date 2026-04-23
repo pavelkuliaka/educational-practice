@@ -3,11 +3,10 @@ import sys
 from datetime import datetime, timedelta
 
 import pytest
-
 from src.database import (
+    create_access_token,
     create_app,
     create_auth_code,
-    create_access_token,
 )
 
 src_path = os.path.join(os.path.dirname(__file__), "..", "src")

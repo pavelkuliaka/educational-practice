@@ -1,7 +1,8 @@
 import os
-from dotenv import load_dotenv
 from datetime import timedelta
+
 from crypto import load_rsa_private_key
+from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -19,7 +20,7 @@ if not os.path.isabs(private_key_path):
     private_key_path = os.path.join(os.path.dirname(__file__), "..", private_key_path)
 
 if os.path.exists(private_key_path):
-    with open(private_key_path, "r") as f:
+    with open(private_key_path) as f:
         PRIVATE_KEY = load_rsa_private_key(f.read())
 else:
     PRIVATE_KEY = None

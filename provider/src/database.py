@@ -1,12 +1,10 @@
 import sqlite3
 import uuid
 from sqlite3 import Connection
-from flask import g
-
 from typing import Any
 
 from config import DATABASE_PATH
-
+from flask import g
 
 DATABASE = DATABASE_PATH
 
@@ -91,7 +89,8 @@ def create_user(
     cursor = database.cursor()
     user_id = str(uuid.uuid4())
     cursor.execute(
-        "INSERT INTO users (user_id, email, password_hash, provider) VALUES (?, ?, ?, ?)",
+        "INSERT INTO users (user_id, email, password_hash, provider) \
+            VALUES (?, ?, ?, ?)",
         (user_id, email, password_hash, provider),
     )
     database.commit()
@@ -112,7 +111,8 @@ def create_app(
     database = get_database()
     cursor = database.cursor()
     cursor.execute(
-        "INSERT INTO apps (client_id, client_secret, name, redirect_uri, owner_email) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO apps (client_id, client_secret, name, \
+            redirect_uri, owner_email) VALUES (?, ?, ?, ?, ?)",
         (client_id, client_secret, name, redirect_uri, owner_email),
     )
     database.commit()
@@ -160,7 +160,9 @@ def create_auth_code(
     database = get_database()
     cursor = database.cursor()
     cursor.execute(
-        "INSERT INTO auth_codes (code, client_id, user_id, email, expires_at, nonce, code_challenge, code_challenge_method, scope) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO auth_codes (code, client_id, user_id, email, expires_at, \
+            nonce, code_challenge, code_challenge_method, scope) \
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             code,
             client_id,
@@ -197,7 +199,8 @@ def create_access_token(
     database = get_database()
     cursor = database.cursor()
     cursor.execute(
-        "INSERT INTO access_tokens (token, user_id, email, scope, expires_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO access_tokens (token, user_id, email, scope, expires_at) \
+            VALUES (?, ?, ?, ?, ?)",
         (token, user_id, email, scope, expires_at),
     )
     database.commit()
