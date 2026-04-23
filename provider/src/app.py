@@ -3,23 +3,12 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from flask import (
-    Flask,
-    jsonify,
-    request,
-    redirect,
-    render_template,
-    session,
-    url_for,
-    flash,
-)
-from urllib.parse import urlparse
 import secrets
-from datetime import datetime, timedelta, UTC
-import jwt
+from datetime import UTC, datetime, timedelta
 from functools import wraps
-from werkzeug.security import check_password_hash, generate_password_hash
+from urllib.parse import urlparse
 
+import jwt
 from config import (
     APP_SECRET_KEY,
     ISSUER_URL,
@@ -28,22 +17,34 @@ from config import (
 )
 from crypto import build_jwks, verify_pkce
 from database import (
-    init_database,
     close_database,
-    get_user_by_email,
-    create_user,
-    get_app_by_client_id,
-    create_app,
-    delete_app as db_delete_app,
-    update_app_secret,
-    get_apps_by_owner,
-    create_auth_code,
-    get_auth_code,
-    delete_auth_code,
     create_access_token,
+    create_app,
+    create_auth_code,
+    create_user,
+    delete_auth_code,
     get_access_token,
+    get_app_by_client_id,
+    get_apps_by_owner,
+    get_auth_code,
+    get_user_by_email,
+    init_database,
+    update_app_secret,
 )
-
+from database import (
+    delete_app as db_delete_app,
+)
+from flask import (
+    Flask,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(
     __name__,

@@ -3,9 +3,9 @@ import sys
 import tempfile
 
 import pytest
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.backends import default_backend
 from werkzeug.security import generate_password_hash
 
 test_dir = tempfile.mkdtemp()
@@ -67,8 +67,9 @@ def app_context(app):
 
 @pytest.fixture
 def test_user(app_context):
-    from src.database import create_user
     import uuid
+
+    from src.database import create_user
 
     email = f"test-{uuid.uuid4().hex[:8]}@example.com"
     password = "testpassword"
