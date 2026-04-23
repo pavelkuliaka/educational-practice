@@ -1,5 +1,3 @@
-
-
 def test_register_user_get(client):
     response = client.get("/register/user")
     assert response.status_code == 200
