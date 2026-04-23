@@ -5,11 +5,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import secrets
 from urllib.parse import urlencode
-from flask import session, url_for, abort
-import requests
+
 import jwt
-from utils import extract_email
+import requests
 from config import REDIRECT_URI
+from flask import abort, session, url_for
+from utils import extract_email
 
 
 def build_auth_url(

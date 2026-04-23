@@ -1,5 +1,6 @@
 import re
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 def is_email(string: str) -> bool:
@@ -48,7 +49,8 @@ def validate_configs(configs: dict) -> None:
     for provider, config in configs.items():
         if not config:
             raise ValueError(
-                f"Error in the provider's configuration file: missing {provider}'s config"
+                f"Error in the provider's configuration \
+                    file: missing {provider}'s config"
             )
 
         common_fields = [
@@ -64,35 +66,41 @@ def validate_configs(configs: dict) -> None:
         for field in common_fields:
             if not config.get(field):
                 raise ValueError(
-                    f'Error in the provider\'s configuration file: "{provider}" missing "{field}"'
+                    f'Error in the provider\'s configuration \
+                        file: "{provider}" missing "{field}"'
                 )
 
         auth_type = config.get("auth_type", {})
         auth_type_value = auth_type.get("type")
         if not auth_type_value:
             raise ValueError(
-                f'Error in the provider\'s configuration file: "{provider}" missing "type" in "auth_type"'
+                f'Error in the provider\'s configuration \
+                    file: "{provider}" missing "type" in "auth_type"'
             )
 
         params = auth_type.get("params")
         if not params:
             raise ValueError(
-                f'Error in the provider\'s configuration file: "{provider}" missing "params" in "auth_type"'
+                f'Error in the provider\'s configuration \
+                    file: "{provider}" missing "params" in "auth_type"'
             )
 
         if auth_type_value == "OIDC":
             for field in ["jwks_uri", "algorithms", "issuer"]:
                 if not params.get(field):
                     raise ValueError(
-                        f'Error in the provider\'s configuration file: "{provider}" missing "{field}" in OIDC params'
+                        f'Error in the provider\'s configuration \
+                            file: "{provider}" missing "{field}" in OIDC params'
                     )
         elif auth_type_value == "OAuth2":
             for field in ["user_info_url", "email_request_headers"]:
                 if not params.get(field):
                     raise ValueError(
-                        f'Error in the provider\'s configuration file: "{provider}" missing "{field}" in OAuth2 params'
+                        f'Error in the provider\'s configuration \
+                            file: "{provider}" missing "{field}" in OAuth2 params'
                     )
         else:
             raise ValueError(
-                f'Error in the provider\'s configuration file: "{provider}" unsupported auth_type "{auth_type_value}"'
+                f'Error in the provider\'s configuration \
+                    file: "{provider}" unsupported auth_type "{auth_type_value}"'
             )
