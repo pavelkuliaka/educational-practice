@@ -1,7 +1,7 @@
 import os
 import sys
 import tempfile
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from werkzeug.security import generate_password_hash
@@ -64,8 +64,9 @@ def app_context(app):
 
 @pytest.fixture
 def test_user(app_context):
-    from src.database import create_user
     import uuid
+
+    from src.database import create_user
 
     email = f"test-{uuid.uuid4().hex[:8]}@example.com"
     password = "testpassword"

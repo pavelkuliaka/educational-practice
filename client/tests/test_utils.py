@@ -1,9 +1,9 @@
 import pytest
 from src.utils import (
-    is_email,
-    flatten_to_strings,
-    extract_email,
     build_headers,
+    extract_email,
+    flatten_to_strings,
+    is_email,
     validate_configs,
 )
 
