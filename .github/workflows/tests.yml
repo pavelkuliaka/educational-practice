@@ -5,11 +5,6 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        app: [provider, client]
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,32 +17,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v4
 
-      - name: Create virtual environment
-        run: uv venv
-
       - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Check tests exist
-        id: check_tests
-        run: |
-          if [ -d "${{ matrix.app }}/tests" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
+      - name: Run tests for provider
+        run: PYTHONPATH=provider/src uv run pytest provider/tests/ -v
 
-      - name: Run tests
-        if: steps.check_tests.outputs.exists == 'true'
-        run: |   
-          cd ${{ matrix.app }}
-          PYTHONPATH="${{ matrix.app }}/src" uv run pytest tests/ -v
-        continue-on-error: true
-
-      - name: Upload pytest results
-        if: steps.check_tests.outputs.exists == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-results-${{ matrix.app }}
-          path: ${{ matrix.app }}/.pytest_cache
-          retention-days: 7
+      - name: Run tests for client
+        run: PYTHONPATH=client/src uv run pytest client/tests/ -v
