@@ -1,5 +1,7 @@
 import os
 import sys
+from collections.abc import Callable
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -25,6 +27,7 @@ from flask import (
 )
 from oauth import build_auth_url, get_email_OAuth2, get_email_OIDC, get_tokens
 from utils import build_headers, validate_configs
+from werkzeug import Response
 
 validate_configs(CONFIGS)
 
@@ -43,9 +46,9 @@ app.config["PERMANENT_SESSION_LIFETIME"] = PERMANENT_SESSION_LIFETIME
 app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 
 
-def login_required(function):
+def login_required(function: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(function)
-    def decorated_function(*args, **kwargs):
+    def decorated_function(*args: Any, **kwargs: Any) -> Response:
         if "user_email" not in session:
             return redirect(url_for("login", next=url_for("dashboard")))
         return function(*args, **kwargs)
@@ -54,7 +57,7 @@ def login_required(function):
 
 
 @app.route("/login", methods=["GET", "POST"])
-def login():
+def login() -> Response:
     if "user_email" in session:
         return redirect(url_for("dashboard"))
     if request.method == "POST":
@@ -82,7 +85,7 @@ def login():
 
 
 @app.route("/register", methods=["GET", "POST"])
-def register():
+def register() -> Response:
     if "user_email" in session:
         return redirect(url_for("dashboard"))
     if request.method == "POST":
@@ -105,7 +108,7 @@ def register():
 
 
 @app.route("/")
-def home():
+def home() -> Response:
     if "user_email" in session:
         return redirect(url_for("dashboard"))
 
@@ -114,17 +117,17 @@ def home():
 
 
 @app.errorhandler(404)
-def page_not_found(error):
+def page_not_found(error: Any) -> tuple[str, int]:
     return render_template("404.html"), 404
 
 
 @app.errorhandler(400)
-def bad_request(error):
+def bad_request(error: Any) -> tuple[str, int]:
     return render_template("400.html", error=str(error)), 400
 
 
 @app.route("/login/<provider>")
-def login_provider(provider: str):
+def login_provider(provider: str) -> Response:
     if provider not in CONFIGS:
         abort(404, description="Provider not found")
 
@@ -143,7 +146,7 @@ def login_provider(provider: str):
 
 
 @app.route("/callback/<provider>")
-def callback(provider: str):
+def callback(provider: str) -> Response:
     if provider not in CONFIGS:
         abort(404, description="Provider not found")
 
@@ -236,12 +239,12 @@ def callback(provider: str):
 
 @app.route("/dashboard")
 @login_required
-def dashboard():
+def dashboard() -> str:
     return render_template("dashboard.html", user_email=session["user_email"])
 
 
 @app.route("/logout")
-def logout():
+def logout() -> Response:
     session.clear()
     return redirect(url_for("login"))
 
