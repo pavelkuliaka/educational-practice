@@ -1,5 +1,7 @@
 import os
 import sys
+from collections.abc import Callable
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -44,6 +46,7 @@ from flask import (
     session,
     url_for,
 )
+from werkzeug import Response
 from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(
@@ -61,19 +64,19 @@ app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 
 
 @app.errorhandler(404)
-def not_found(error):
+def not_found(error: Any) -> tuple[str, int]:
     return render_template("404.html"), 404
 
 
 @app.errorhandler(400)
-def bad_request(error):
+def bad_request(error: Any) -> tuple[str, int]:
     return render_template("400.html", error=str(error)), 400
 
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 
-def login_required(function):
+def login_required(function: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(function)
     def decorated_function(*args, **kwargs):
         if "user_email" not in session:
@@ -88,7 +91,7 @@ def login_required(function):
 
 
 @app.route("/login", methods=["GET", "POST"])
-def login():
+def login() -> Response:
     if request.method == "GET":
         next_url = request.args.get("next", url_for("dashboard"))
         return render_template("login_form.html", next_url=next_url)
@@ -116,20 +119,20 @@ def login():
 
 
 @app.route("/logout")
-def logout():
+def logout() -> Response:
     session.pop("user_email", None)
     return redirect(url_for("login"))
 
 
 @app.route("/dashboard")
 @login_required
-def dashboard():
+def dashboard() -> str:
     apps = get_apps_by_owner(session["user_email"])
     return render_template("dashboard.html", email=session["user_email"], apps=apps)
 
 
 @app.route("/oauth/.well-known/openid-configuration")
-def openid_config():
+def openid_config() -> Response:
     return jsonify(
         {
             "issuer": ISSUER_URL,
@@ -146,7 +149,7 @@ def openid_config():
 
 
 @app.route("/oauth/authorize", methods=["GET", "POST"])
-def authorize():
+def authorize() -> tuple[Response, int] | str:
     client_id = request.args.get("client_id")
     redirect_uri = request.args.get("redirect_uri")
     scope = request.args.get("scope")
@@ -209,13 +212,13 @@ def authorize():
                 callback_url += f"&state={state}"
             return redirect(callback_url)
         else:
-            return "Invalid credentials", 401
+            return jsonify({"error": "invalid_credentials"}), 401
 
     return render_template("login_form.html")
 
 
 @app.route("/oauth/token", methods=["POST"])
-def token():
+def token() -> tuple[Response, int] | Response:
     grant_type = request.form.get("grant_type")
     code = request.form.get("code")
     client_id = request.form.get("client_id")
@@ -302,7 +305,7 @@ def token():
 
 
 @app.route("/oauth/userinfo")
-def userinfo():
+def userinfo() -> tuple[Response, int] | Response:
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         return jsonify({"error": "unauthorized"}), 401
@@ -333,7 +336,7 @@ def userinfo():
 
 
 @app.route("/register/user", methods=["GET", "POST"])
-def register_user():
+def register_user() -> str | tuple[Response, int] | Response:
     if request.method == "GET":
         return render_template("register_user.html")
 
@@ -371,7 +374,7 @@ def register_user():
 
 @app.route("/register/app", methods=["GET", "POST"])
 @login_required
-def register_app():
+def register_app() -> str | tuple[Response, int] | Response:
     if request.method == "GET":
         return render_template("register_app_form.html", next=url_for("login"))
 
@@ -414,7 +417,7 @@ def register_app():
 
 @app.route("/app/<client_id>/delete", methods=["POST"])
 @login_required
-def delete_app(client_id):
+def delete_app(client_id: str) -> Response:
     db_delete_app(client_id, session["user_email"])
 
     return redirect(url_for("dashboard"))
@@ -422,7 +425,7 @@ def delete_app(client_id):
 
 @app.route("/app/<client_id>/regenerate", methods=["POST"])
 @login_required
-def regenerate_secret(client_id):
+def regenerate_secret(client_id: str) -> str:
     new_secret = secrets.token_hex(32)
     update_app_secret(client_id, new_secret, session["user_email"])
 
@@ -436,7 +439,7 @@ def regenerate_secret(client_id):
     )
 
 
-def jwks():
+def jwks() -> Response:
     return jsonify(build_jwks(PRIVATE_KEY))
 
 

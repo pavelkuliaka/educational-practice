@@ -3,15 +3,16 @@ import hashlib
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 
 
-def load_rsa_private_key(pem_string: str):
+def load_rsa_private_key(pem_string: str) -> RSAPrivateKey:
     return serialization.load_pem_private_key(
         pem_string.encode(), password=None, backend=default_backend()
     )
 
 
-def int_to_base64url(integer):
+def int_to_base64url(integer: int) -> str:
     byte_length = (integer.bit_length() + 7) // 8
     return (
         base64.urlsafe_b64encode(integer.to_bytes(byte_length, "big"))
@@ -20,7 +21,7 @@ def int_to_base64url(integer):
     )
 
 
-def build_jwks(private_key):
+def build_jwks(private_key: RSAPrivateKey) -> dict:
     public_key = private_key.public_key()
     n = public_key.public_numbers().n
     e = public_key.public_numbers().e
