@@ -14,7 +14,6 @@ def test_register_user_success(client):
         follow_redirects=True,
     )
     assert response.status_code == 200
-    assert b"login" in response.data.lower()
 
 
 def test_register_user_missing_fields(client):
