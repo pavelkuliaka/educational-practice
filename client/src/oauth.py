@@ -22,7 +22,7 @@ def build_auth_url(
 
     params = {
         "client_id": client_id,
-        "redirect_uri": f"{REDIRECT_URI}/callback/{provider}",
+        "redirect_uri": f"{REDIRECT_URI.rstrip('/')}/callback/{provider}",
         "response_type": "code",
         "scope": scope,
         "state": state,
