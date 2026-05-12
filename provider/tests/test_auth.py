@@ -55,6 +55,7 @@ def test_login_with_next_url(client, test_user):
         follow_redirects=False,
     )
     assert response.status_code == 302
+    assert response.location == "/dashboard"
 
 
 def test_logout(client):

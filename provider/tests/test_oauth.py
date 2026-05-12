@@ -106,6 +106,7 @@ def test_token_missing_parameters(client, test_app):
         data={"grant_type": "authorization_code"},
     )
     assert response.status_code == 401
+    assert response.json["error"] == "invalid_client"
 
 
 def test_token_invalid_client(client):

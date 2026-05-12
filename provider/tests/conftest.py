@@ -32,14 +32,22 @@ def app():
     sys.path.insert(0, src_path)
     os.chdir(os.path.join(os.path.dirname(__file__), ".."))
 
+    for mod in list(sys.modules):
+        if mod in (
+            "src",
+            "src.app",
+            "src.config",
+            "src.database",
+            "src.crypto",
+            "config",
+            "database",
+            "crypto",
+        ):
+            del sys.modules[mod]
+
     with tempfile.TemporaryDirectory() as tmpdir:
         db_path = os.path.join(tmpdir, "test.db")
         os.environ["DATABASE_PATH"] = db_path
-
-        if "src.config" in sys.modules:
-            del sys.modules["src.config"]
-        if "src.database" in sys.modules:
-            del sys.modules["src.database"]
 
         from src.app import app as flask_app
 
