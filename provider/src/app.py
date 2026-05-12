@@ -447,4 +447,4 @@ app.add_url_rule("/oauth/jwks.json", "jwks", jwks)
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    app.run(port=5001)
