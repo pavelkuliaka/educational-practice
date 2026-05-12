@@ -250,7 +250,7 @@ def logout() -> Response:
 
 
 def main() -> None:
-    app.run(port=5000, debug=True)
+    app.run(port=5000)
 
 
 if __name__ == "__main__":
