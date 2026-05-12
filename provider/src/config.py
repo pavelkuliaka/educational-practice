@@ -19,11 +19,14 @@ private_key_path: str = env.get("PRIVATE_KEY_PATH", "private_key.pem")
 if not os.path.isabs(private_key_path):
     private_key_path = os.path.join(os.path.dirname(__file__), "..", private_key_path)
 
-if os.path.exists(private_key_path):
-    with open(private_key_path) as f:
-        PRIVATE_KEY: RSAPrivateKey | None = load_rsa_private_key(f.read())
-else:
-    PRIVATE_KEY = None
+if not os.path.exists(private_key_path):
+    raise FileNotFoundError(
+        f"RSA private key not found at {private_key_path}. "
+        f"Generate one with: openssl genrsa -out {private_key_path} 2048"
+    )
+
+with open(private_key_path) as f:
+    PRIVATE_KEY: RSAPrivateKey = load_rsa_private_key(f.read())
 
 ISSUER_URL: str = env.get("ISSUER_URL", "http://localhost:5001/oauth")
 

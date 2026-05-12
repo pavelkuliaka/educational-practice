@@ -106,11 +106,7 @@ def login() -> Response:
 
     user = get_user_by_email(email)
 
-    if not user:
-        flash("Аккаунта с таким email нет", category="error")
-        return redirect(url_for("login", next=next_url))
-
-    if not check_password_hash(user["password_hash"], password):
+    if not user or not check_password_hash(user["password_hash"], password):
         flash("Неверный логин или пароль", category="error")
         return redirect(url_for("login", next=next_url))
 
@@ -200,7 +196,7 @@ def authorize() -> tuple[Response, int] | str:
                 client_id,
                 user["user_id"],
                 email,
-                (datetime.now() + timedelta(minutes=10)).isoformat(),
+                (datetime.now(UTC) + timedelta(minutes=10)).isoformat(),
                 nonce,
                 code_challenge,
                 code_challenge_method,
@@ -238,7 +234,7 @@ def token() -> tuple[Response, int] | Response:
         return jsonify({"error": "invalid_grant"}), 400
 
     expires_at = datetime.fromisoformat(db_code["expires_at"])
-    if expires_at < datetime.now():
+    if expires_at < datetime.now(UTC):
         delete_auth_code(code)
         return jsonify({"error": "invalid_grant"}), 400
 
@@ -317,7 +313,7 @@ def userinfo() -> tuple[Response, int] | Response:
         return jsonify({"error": "invalid_token"}), 401
 
     token_expires = datetime.fromisoformat(token_data["expires_at"])
-    if token_expires < datetime.now():
+    if token_expires < datetime.now(UTC):
         return jsonify({"error": "invalid_token"}), 401
 
     scope_list = token_data.get("scope", "").split() if token_data.get("scope") else []
