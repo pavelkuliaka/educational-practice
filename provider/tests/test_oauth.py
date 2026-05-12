@@ -1,13 +1,8 @@
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
-from src.database import (
-    create_access_token,
-    create_app,
-    create_auth_code,
-)
 
 src_path = os.path.join(os.path.dirname(__file__), "..", "src")
 sys.path.insert(0, src_path)
@@ -16,6 +11,8 @@ sys.path.insert(0, src_path)
 @pytest.fixture
 def test_app(app_context):
     import secrets
+
+    from src.database import create_app
 
     client_id = secrets.token_hex(16)
     client_secret = secrets.token_hex(32)
@@ -106,6 +103,7 @@ def test_token_missing_parameters(client, test_app):
         data={"grant_type": "authorization_code"},
     )
     assert response.status_code == 401
+    assert response.json["error"] == "invalid_client"
 
 
 def test_token_invalid_client(client):
@@ -141,13 +139,15 @@ def test_token_invalid_grant(client, test_app):
 def test_token_expired_code(client, test_app, app_context):
     import uuid
 
+    from src.database import create_auth_code
+
     code = f"expiredcode-{uuid.uuid4().hex[:8]}"
     create_auth_code(
         code,
         test_app["client_id"],
         "user123",
         "test@example.com",
-        (datetime.now() - timedelta(minutes=1)).isoformat(),
+        (datetime.now(UTC) - timedelta(minutes=1)).isoformat(),
         None,
         None,
         None,
@@ -171,13 +171,15 @@ def test_token_expired_code(client, test_app, app_context):
 def test_token_success(client, test_app, app_context):
     import uuid
 
+    from src.database import create_auth_code
+
     code = f"validcode-{uuid.uuid4().hex[:8]}"
     create_auth_code(
         code,
         test_app["client_id"],
         "user123",
         "test@example.com",
-        (datetime.now() + timedelta(minutes=10)).isoformat(),
+        (datetime.now(UTC) + timedelta(minutes=10)).isoformat(),
         None,
         None,
         None,
@@ -204,6 +206,8 @@ def test_token_success(client, test_app, app_context):
 def test_token_with_pkce(client, test_app, app_context):
     import uuid
 
+    from src.database import create_auth_code
+
     code = f"pkcecode-{uuid.uuid4().hex[:8]}"
     code_challenge = "test_challenge"
     create_auth_code(
@@ -211,7 +215,7 @@ def test_token_with_pkce(client, test_app, app_context):
         test_app["client_id"],
         "user123",
         "test@example.com",
-        (datetime.now() + timedelta(minutes=10)).isoformat(),
+        (datetime.now(UTC) + timedelta(minutes=10)).isoformat(),
         None,
         code_challenge,
         "plain",
@@ -235,6 +239,8 @@ def test_token_with_pkce(client, test_app, app_context):
 def test_token_with_invalid_pkce(client, test_app, app_context):
     import uuid
 
+    from src.database import create_auth_code
+
     code = f"badpkce-{uuid.uuid4().hex[:8]}"
     code_challenge = "test_challenge"
     create_auth_code(
@@ -242,7 +248,7 @@ def test_token_with_invalid_pkce(client, test_app, app_context):
         test_app["client_id"],
         "user123",
         "test@example.com",
-        (datetime.now() + timedelta(minutes=10)).isoformat(),
+        (datetime.now(UTC) + timedelta(minutes=10)).isoformat(),
         None,
         code_challenge,
         "plain",
@@ -282,13 +288,15 @@ def test_userinfo_invalid_token(client):
 def test_userinfo_expired_token(client, app_context):
     import uuid
 
+    from src.database import create_access_token
+
     token = f"expiredtoken-{uuid.uuid4().hex[:8]}"
     create_access_token(
         token,
         "user123",
         "test@example.com",
         "openid email",
-        (datetime.now() - timedelta(minutes=1)).isoformat(),
+        (datetime.now(UTC) - timedelta(minutes=1)).isoformat(),
     )
 
     response = client.get(
@@ -302,13 +310,15 @@ def test_userinfo_expired_token(client, app_context):
 def test_userinfo_success(client, app_context):
     import uuid
 
+    from src.database import create_access_token
+
     token = f"validtoken-{uuid.uuid4().hex[:8]}"
     create_access_token(
         token,
         "user123",
         "test@example.com",
         "openid email",
-        (datetime.now() + timedelta(hours=1)).isoformat(),
+        (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
     )
 
     response = client.get(

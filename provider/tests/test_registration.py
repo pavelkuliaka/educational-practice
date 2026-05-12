@@ -44,10 +44,8 @@ def test_register_user_json_success(client):
         "/register/user",
         json={"email": "jsonuser@example.com", "password": "password123"},
     )
-    if response.status_code == 201:
-        assert response.json["email"] == "jsonuser@example.com"
-    else:
-        assert response.status_code == 400
+    assert response.status_code == 201
+    assert response.json["email"] == "jsonuser@example.com"
 
 
 def test_register_user_json_duplicate(client, test_user):
