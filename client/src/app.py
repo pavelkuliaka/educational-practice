@@ -1,11 +1,7 @@
 import os
-import sys
 from collections.abc import Callable
-from typing import Any
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from functools import wraps
+from typing import Any
 
 from auth import register_user, verify_user
 from config import APP_SECRET_KEY, CONFIGS, PERMANENT_SESSION_LIFETIME
@@ -25,9 +21,9 @@ from flask import (
     session,
     url_for,
 )
+from flask.typing import ResponseReturnValue
 from oauth import build_auth_url, get_email_OAuth2, get_email_OIDC, get_tokens
 from utils import build_headers, validate_configs
-from werkzeug import Response
 
 validate_configs(CONFIGS)
 
@@ -46,9 +42,9 @@ app.config["PERMANENT_SESSION_LIFETIME"] = PERMANENT_SESSION_LIFETIME
 app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 
 
-def login_required(function: Callable[..., Any]) -> Callable[..., Any]:
+def login_required(function: Callable[..., ResponseReturnValue]) -> Callable[..., Any]:
     @wraps(function)
-    def decorated_function(*args: Any, **kwargs: Any) -> Response:
+    def decorated_function(*args: Any, **kwargs: Any) -> ResponseReturnValue:
         if "user_email" not in session:
             return redirect(url_for("login", next=url_for("dashboard")))
         return function(*args, **kwargs)
@@ -57,7 +53,7 @@ def login_required(function: Callable[..., Any]) -> Callable[..., Any]:
 
 
 @app.route("/login", methods=["GET", "POST"])
-def login() -> Response:
+def login() -> ResponseReturnValue:
     if "user_email" in session:
         return redirect(url_for("dashboard"))
     if request.method == "POST":
@@ -85,7 +81,7 @@ def login() -> Response:
 
 
 @app.route("/register", methods=["GET", "POST"])
-def register() -> Response:
+def register() -> ResponseReturnValue:
     if "user_email" in session:
         return redirect(url_for("dashboard"))
     if request.method == "POST":
@@ -108,7 +104,7 @@ def register() -> Response:
 
 
 @app.route("/")
-def home() -> Response:
+def home() -> ResponseReturnValue:
     if "user_email" in session:
         return redirect(url_for("dashboard"))
 
@@ -117,17 +113,17 @@ def home() -> Response:
 
 
 @app.errorhandler(404)
-def page_not_found(error: Any) -> tuple[str, int]:
+def page_not_found(error: Any) -> ResponseReturnValue:
     return render_template("404.html"), 404
 
 
 @app.errorhandler(400)
-def bad_request(error: Any) -> tuple[str, int]:
+def bad_request(error: Any) -> ResponseReturnValue:
     return render_template("400.html", error=str(error)), 400
 
 
 @app.route("/login/<provider>")
-def login_provider(provider: str) -> Response:
+def login_provider(provider: str) -> ResponseReturnValue:
     if provider not in CONFIGS:
         abort(404, description="Provider not found")
 
@@ -146,7 +142,7 @@ def login_provider(provider: str) -> Response:
 
 
 @app.route("/callback/<provider>")
-def callback(provider: str) -> Response:
+def callback(provider: str) -> ResponseReturnValue:
     if provider not in CONFIGS:
         abort(404, description="Provider not found")
 
@@ -239,12 +235,12 @@ def callback(provider: str) -> Response:
 
 @app.route("/dashboard")
 @login_required
-def dashboard() -> str:
+def dashboard() -> ResponseReturnValue:
     return render_template("dashboard.html", user_email=session["user_email"])
 
 
 @app.route("/logout")
-def logout() -> Response:
+def logout() -> ResponseReturnValue:
     session.clear()
     return redirect(url_for("login"))
 

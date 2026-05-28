@@ -1,9 +1,5 @@
-import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import secrets
+from typing import Any
 from urllib.parse import urlencode
 
 import jwt
@@ -47,8 +43,8 @@ def get_tokens(
     client_id: str,
     client_secret: str,
     token_url: str,
-    token_request_headers: dict,
-) -> dict:
+    token_request_headers: dict[str, Any],
+) -> dict[str, Any]:
     token_data = {
         "code": code,
         "client_id": client_id,
@@ -75,7 +71,7 @@ def get_tokens(
 
 
 def get_email_OIDC(
-    id_token: str, jwks_uri: str, algorithms: list, client_id: str, issuer: str
+    id_token: str, jwks_uri: str, algorithms: list[str], client_id: str, issuer: str
 ) -> str:
     try:
         jwks_client = jwt.PyJWKClient(jwks_uri)
@@ -94,7 +90,9 @@ def get_email_OIDC(
             session.pop("oauth2_nonce", None)
             abort(400, description="Invalid NONCE")
 
-        email = payload.get("email", None)
+        email: str | None = payload.get("email", None)
+        if email is None:
+            abort(400, description="Email not found in token")
         session.pop("oauth2_state", None)
         session.pop("oauth2_nonce", None)
         return email
@@ -104,7 +102,7 @@ def get_email_OIDC(
         abort(400, description="Invalid ID token")
 
 
-def get_email_OAuth2(user_info_url: str, headers: dict) -> str:
+def get_email_OAuth2(user_info_url: str, headers: dict[str, Any]) -> str:
     user_response = requests.get(url=user_info_url, headers=headers)
 
     if user_response.status_code != 200:
@@ -119,6 +117,8 @@ def get_email_OAuth2(user_info_url: str, headers: dict) -> str:
     if "error" in user_data:
         abort(400, description=user_data.get("error", "Failed to get user info"))
 
-    email = extract_email(user_data)
+    email: str | None = extract_email(user_data)
+    if email is None:
+        abort(400, description="Email not found in user data")
 
     return email

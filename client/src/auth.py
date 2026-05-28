@@ -1,8 +1,3 @@
-import os
-import sys
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from database import get_database
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -21,12 +16,11 @@ def verify_user(email: str | None, password: str | None) -> bool | str:
     if not user:
         return False
 
-    provider = user["provider"]
+    provider: str | None = user["provider"]
     if provider:
         return provider
 
-    result = check_password_hash(user["password_hash"], password)
-    return result
+    return check_password_hash(user["password_hash"], password)
 
 
 def register_user(email: str | None, password: str | None) -> bool | str:
@@ -55,8 +49,8 @@ def register_user(email: str | None, password: str | None) -> bool | str:
         database.commit()
         return True
 
-    provider = existing_user["provider"]
-    if provider:
+    provider: str | None = existing_user["provider"]
+    if provider is not None:
         return provider
 
     return False

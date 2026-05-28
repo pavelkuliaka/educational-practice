@@ -18,7 +18,7 @@ def get_database() -> Connection | Any:
     return database
 
 
-def close_database(exception: Any) -> None:
+def close_database(_: Any) -> None:
     database = getattr(g, "_database", None)
 
     if database is not None:
@@ -40,7 +40,7 @@ def init_database() -> None:
         connection.commit()
 
 
-def get_user_by_email(email: str) -> dict | None:
+def get_user_by_email(email: str) -> dict[str, Any] | None:
     database = get_database()
     cursor = database.cursor()
     cursor.execute("SELECT * FROM users WHERE email = ?", (email,))

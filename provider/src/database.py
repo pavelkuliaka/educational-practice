@@ -9,7 +9,7 @@ from flask import g
 DATABASE = DATABASE_PATH
 
 
-def get_database() -> Connection | Any:
+def get_database() -> Connection:
     database = getattr(g, "_database", None)
 
     if database is None:
@@ -19,7 +19,7 @@ def get_database() -> Connection | Any:
     return database
 
 
-def close_database(exception: Any) -> None:
+def close_database(_: Any) -> None:
     database = getattr(g, "_database", None)
 
     if database is not None:
@@ -74,7 +74,7 @@ def init_database() -> None:
         connection.commit()
 
 
-def get_user_by_email(email: str) -> dict | None:
+def get_user_by_email(email: str) -> dict[str, Any] | None:
     database = get_database()
     cursor = database.cursor()
     cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
@@ -97,7 +97,7 @@ def create_user(
     return user_id
 
 
-def get_app_by_client_id(client_id: str) -> dict | None:
+def get_app_by_client_id(client_id: str) -> dict[str, Any] | None:
     database = get_database()
     cursor = database.cursor()
     cursor.execute("SELECT * FROM apps WHERE client_id = ?", (client_id,))
@@ -138,7 +138,7 @@ def update_app_secret(client_id: str, new_secret: str, owner_email: str) -> None
     database.commit()
 
 
-def get_apps_by_owner(owner_email: str) -> list[dict]:
+def get_apps_by_owner(owner_email: str) -> list[dict[str, Any]]:
     database = get_database()
     cursor = database.cursor()
     cursor.execute("SELECT * FROM apps WHERE owner_email = ?", (owner_email,))
@@ -178,7 +178,7 @@ def create_auth_code(
     database.commit()
 
 
-def get_auth_code(code: str) -> dict | None:
+def get_auth_code(code: str) -> dict[str, Any] | None:
     database = get_database()
     cursor = database.cursor()
     cursor.execute("SELECT * FROM auth_codes WHERE code = ?", (code,))
@@ -206,7 +206,7 @@ def create_access_token(
     database.commit()
 
 
-def get_access_token(token: str) -> dict | None:
+def get_access_token(token: str) -> dict[str, Any] | None:
     database = get_database()
     cursor = database.cursor()
     cursor.execute("SELECT * FROM access_tokens WHERE token = ?", (token,))

@@ -1,6 +1,6 @@
 import re
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 
 def is_email(string: str) -> bool:
@@ -24,7 +24,7 @@ def flatten_to_strings(data: Any) -> list[str]:
     return result
 
 
-def extract_email(user_data: str | dict | list) -> str | None:
+def extract_email(user_data: str | dict[str, Any] | list[Any]) -> str | None:
     if isinstance(user_data, str) and is_email(user_data):
         return user_data
 
@@ -36,13 +36,15 @@ def extract_email(user_data: str | dict | list) -> str | None:
     return None
 
 
-def build_headers(headers: Callable | dict, **params) -> dict:
+def build_headers(
+    headers: Callable[..., Any] | dict[str, Any], **params: Any
+) -> dict[str, Any]:
     if callable(headers):
-        return headers(**params)
+        return cast(dict[str, Any], headers(**params))
     return headers
 
 
-def validate_configs(configs: dict) -> None:
+def validate_configs(configs: dict[str, Any]) -> None:
     if not configs:
         raise ValueError("No providers configured")
 
