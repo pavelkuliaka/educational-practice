@@ -1,0 +1,18 @@
+name: Type check with mypy
+on: [push, pull_request]
+jobs:
+  mypy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@v4
+      - name: Install dependencies
+        run: uv sync --all-extras
+      - name: Run mypy on provider
+        run: uv run mypy provider/src/ --explicit-package-bases
+      - name: Run mypy on client
+        run: uv run mypy client/src/ --explicit-package-bases
+        
